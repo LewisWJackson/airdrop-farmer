@@ -40,7 +40,9 @@ console.log("Signed message:   ", message);
 console.log("Recovered signer: ", recovered);
 console.log("Signer matches:   ", recovered === w0.address);
 console.log("");
-console.log("Your mnemonic phrase (controls all 10 wallets):");
-console.log(mnemonic);
-console.log("");
-console.log("You can import this mnemonic into MetaMask at any time to access your funds directly.");
+console.log("⚠️  MNEMONIC DISPLAY SUPPRESSED FOR SECURITY");
+console.log("Your mnemonic was shown during initial setup (src/index.ts).");
+console.log(
+  "If you need to recover it, run: npx tsx src/index.ts --show-mnemonic",
+);
+console.log("Store it offline in a safe place. Never share it.");

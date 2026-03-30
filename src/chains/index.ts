@@ -26,7 +26,9 @@ const chains: Record<string, ChainConfig> = {
     explorerUrl: "https://basescan.org",
     nativeCurrency: "ETH",
     isL2: true,
-    bridgeContract: ethers.getAddress("0x49048044d57e1c92a77f79988d21fa8faf74e97e"),
+    bridgeContract: ethers.getAddress(
+      "0x49048044d57e1c92a77f79988d21fa8faf74e97e",
+    ),
   },
   scroll: {
     name: "Scroll",
@@ -35,7 +37,9 @@ const chains: Record<string, ChainConfig> = {
     explorerUrl: "https://scrollscan.com",
     nativeCurrency: "ETH",
     isL2: true,
-    bridgeContract: ethers.getAddress("0xf8b1378579659d8f7ee5f3c929c2f3e332e41fd6"),
+    bridgeContract: ethers.getAddress(
+      "0xf8b1378579659d8f7ee5f3c929c2f3e332e41fd6",
+    ),
   },
   linea: {
     name: "Linea",
@@ -44,7 +48,9 @@ const chains: Record<string, ChainConfig> = {
     explorerUrl: "https://lineascan.build",
     nativeCurrency: "ETH",
     isL2: true,
-    bridgeContract: ethers.getAddress("0xd19d4b5d358258f05d7b411e21a1460d11b0876f"),
+    bridgeContract: ethers.getAddress(
+      "0xd19d4b5d358258f05d7b411e21a1460d11b0876f",
+    ),
   },
   zksync: {
     name: "zkSync Era",
@@ -53,7 +59,9 @@ const chains: Record<string, ChainConfig> = {
     explorerUrl: "https://explorer.zksync.io",
     nativeCurrency: "ETH",
     isL2: true,
-    bridgeContract: ethers.getAddress("0x32400084c286cf3e17e7b677ea9583e60a000324"),
+    bridgeContract: ethers.getAddress(
+      "0x32400084c286cf3e17e7b677ea9583e60a000324",
+    ),
   },
   arbitrum: {
     name: "Arbitrum One",
@@ -62,7 +70,9 @@ const chains: Record<string, ChainConfig> = {
     explorerUrl: "https://arbiscan.io",
     nativeCurrency: "ETH",
     isL2: true,
-    bridgeContract: ethers.getAddress("0x4Dbd4fc535Ac27206064B68FfCf827b0A60BAB3f"),
+    bridgeContract: ethers.getAddress(
+      "0x4Dbd4fc535Ac27206064B68FfCf827b0A60BAB3f",
+    ),
   },
   optimism: {
     name: "Optimism",
@@ -71,7 +81,41 @@ const chains: Record<string, ChainConfig> = {
     explorerUrl: "https://optimistic.etherscan.io",
     nativeCurrency: "ETH",
     isL2: true,
-    bridgeContract: ethers.getAddress("0xbEb5Fc579115071764c7423A4f12eDde41f106Ed"),
+    bridgeContract: ethers.getAddress(
+      "0xbEb5Fc579115071764c7423A4f12eDde41f106Ed",
+    ),
+  },
+  megaeth: {
+    name: "MegaETH",
+    chainId: 4326,
+    rpcUrl: process.env.RPC_MEGAETH || "https://mainnet.megaeth.com/rpc",
+    explorerUrl: "https://megaeth.blockscout.com",
+    nativeCurrency: "ETH",
+    isL2: true,
+  },
+  monad: {
+    name: "Monad Testnet",
+    chainId: 10143,
+    rpcUrl: process.env.RPC_MONAD || "https://monad-testnet.drpc.org",
+    explorerUrl: "https://testnet.monadexplorer.com",
+    nativeCurrency: "MON",
+    isL2: false,
+  },
+  abstract: {
+    name: "Abstract",
+    chainId: 2741,
+    rpcUrl: process.env.RPC_ABSTRACT || "https://api.mainnet.abs.xyz",
+    explorerUrl: "https://abscan.org",
+    nativeCurrency: "ETH",
+    isL2: true,
+  },
+  unichain: {
+    name: "Unichain",
+    chainId: 130,
+    rpcUrl: process.env.RPC_UNICHAIN || "https://mainnet.unichain.org",
+    explorerUrl: "https://uniscan.xyz",
+    nativeCurrency: "ETH",
+    isL2: true,
   },
 };
 
@@ -79,7 +123,10 @@ const providerCache = new Map<string, ethers.JsonRpcProvider>();
 
 export function getChain(name: string): ChainConfig {
   const chain = chains[name.toLowerCase()];
-  if (!chain) throw new Error(`Unknown chain: ${name}. Available: ${Object.keys(chains).join(", ")}`);
+  if (!chain)
+    throw new Error(
+      `Unknown chain: ${name}. Available: ${Object.keys(chains).join(", ")}`,
+    );
   return chain;
 }
 

@@ -13,10 +13,24 @@ import { deployMinimalContract } from "../protocols/deploy-contract.js";
 import { supplyETH, withdrawETH } from "../protocols/aave-v3.js";
 import { createZoraCollection, mintZoraNFT } from "../protocols/zora-mint.js";
 import { eigenDeposit, eigenQueueWithdrawal } from "../protocols/eigenlayer.js";
-import { pendleSwapForPT, pendleSwapPTForToken, getPTBalance, PENDLE_MARKETS } from "../protocols/pendle.js";
-import { generatePersonality, shouldBeActive, getDelay } from "./personality.js";
+import {
+  pendleSwapForPT,
+  pendleSwapPTForToken,
+  getPTBalance,
+  PENDLE_MARKETS,
+} from "../protocols/pendle.js";
+import {
+  generatePersonality,
+  shouldBeActive,
+  getDelay,
+} from "./personality.js";
 import { getSequence } from "./sequences.js";
-import { randomSleep, jitterAmount, shuffle, describeDelay } from "../utils/random.js";
+import {
+  randomSleep,
+  jitterAmount,
+  shuffle,
+  describeDelay,
+} from "../utils/random.js";
 import { log } from "../utils/logger.js";
 import { formatEth } from "../utils/gas.js";
 import { logTaskCost } from "../cost-logger.js";
@@ -29,25 +43,33 @@ const DEFAULT_AMOUNT = ethers.parseEther("0.001");
 async function waitForBridgeArrival(
   chain: string,
   address: string,
-  maxWaitMs: number = 600_000
+  maxWaitMs: number = 600_000,
 ): Promise<void> {
   const provider = getProvider(chain);
   const startBalance = await provider.getBalance(address);
   const deadline = Date.now() + maxWaitMs;
 
-  log.info(`Waiting for bridge deposit to arrive on ${chain} (current balance: ${formatEth(startBalance)} ETH)...`);
+  log.info(
+    `Waiting for bridge deposit to arrive on ${chain} (current balance: ${formatEth(startBalance)} ETH)...`,
+  );
 
   while (Date.now() < deadline) {
     await new Promise((r) => setTimeout(r, 30_000)); // poll every 30s
     const balance = await provider.getBalance(address);
     if (balance > startBalance) {
-      log.success(`Bridge deposit arrived on ${chain}! New balance: ${formatEth(balance)} ETH`);
+      log.success(
+        `Bridge deposit arrived on ${chain}! New balance: ${formatEth(balance)} ETH`,
+      );
       return;
     }
-    log.info(`Still waiting for bridge... (${Math.round((deadline - Date.now()) / 1000)}s remaining)`);
+    log.info(
+      `Still waiting for bridge... (${Math.round((deadline - Date.now()) / 1000)}s remaining)`,
+    );
   }
 
-  log.warn(`Bridge deposit did not arrive within ${maxWaitMs / 1000}s. Proceeding anyway.`);
+  log.warn(
+    `Bridge deposit did not arrive within ${maxWaitMs / 1000}s. Proceeding anyway.`,
+  );
 }
 
 /** Token address lookup per chain */
@@ -76,6 +98,21 @@ const TOKEN_ADDRESSES: Record<string, Record<string, string>> = {
     ETH: ethers.getAddress("0x4200000000000000000000000000000000000006"),
     USDC: ethers.getAddress("0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85"),
   },
+  megaeth: {
+    ETH: ethers.getAddress("0x4200000000000000000000000000000000000006"),
+    USDM: ethers.getAddress("0xFAfDdbb3FC7688494971a79cc65DCa3EF82079E7"),
+  },
+  monad: {
+    ETH: ethers.getAddress("0x3bd359C1119dA7Da1D913D1C4D2B7c461115433A"), // WMON
+  },
+  abstract: {
+    ETH: ethers.getAddress("0x3439153EB7AF838Ad19d56E1571FBD09333C2809"),
+    USDC: ethers.getAddress("0x84A71ccD554Cc1b02749b35d22F684CC8ec987e1"),
+  },
+  unichain: {
+    ETH: ethers.getAddress("0x4200000000000000000000000000000000000006"),
+    USDC: ethers.getAddress("0x078d782b760474a361dda0af3839290b0ef57ad6"),
+  },
 };
 
 function resolveToken(chain: string, symbol: string): string {
@@ -89,7 +126,7 @@ function resolveToken(chain: string, symbol: string): string {
 /** Execute a single task and return the result */
 export async function executeTask(
   privateKey: string,
-  task: Task
+  task: Task,
 ): Promise<TaskResult> {
   const startTime = Date.now();
   try {
@@ -109,16 +146,22 @@ export async function executeTask(
         // Check actual WETH balance to avoid "burn amount exceeds balance"
         const wethAddr = WETH_ADDRESSES[task.chain.toLowerCase()];
         if (wethAddr) {
-          const wethToken = new ethers.Contract(wethAddr, [
-            "function balanceOf(address) view returns (uint256)",
-          ], signer);
-          const wethBal: bigint = await wethToken.balanceOf(await signer.getAddress());
+          const wethToken = new ethers.Contract(
+            wethAddr,
+            ["function balanceOf(address) view returns (uint256)"],
+            signer,
+          );
+          const wethBal: bigint = await wethToken.balanceOf(
+            await signer.getAddress(),
+          );
           if (wethBal === 0n) {
             throw new Error(`No WETH balance to unwrap on ${task.chain}`);
           }
           if (wethBal < amount) {
             amount = wethBal;
-            log.info(`Adjusting unwrap amount to actual WETH balance: ${formatEth(amount)}`);
+            log.info(
+              `Adjusting unwrap amount to actual WETH balance: ${formatEth(amount)}`,
+            );
           }
         }
         txHash = await unwrapEth(signer, task.chain, amount);
@@ -138,10 +181,14 @@ export async function executeTask(
         // For non-ETH tokenIn (e.g. USDC → ETH), use actual token balance
         // The ETH-denominated amount is wrong for tokens with different decimals
         if (tokenInSymbol.toUpperCase() !== "ETH") {
-          const erc20 = new ethers.Contract(tokenIn, [
-            "function balanceOf(address) view returns (uint256)",
-          ], signer);
-          const balance: bigint = await erc20.balanceOf(await signer.getAddress());
+          const erc20 = new ethers.Contract(
+            tokenIn,
+            ["function balanceOf(address) view returns (uint256)"],
+            signer,
+          );
+          const balance: bigint = await erc20.balanceOf(
+            await signer.getAddress(),
+          );
           if (balance === 0n) {
             throw new Error(`No ${tokenInSymbol} balance to swap on ${chain}`);
           }
@@ -150,11 +197,25 @@ export async function executeTask(
         }
 
         if (protocol === "uniswap-v3") {
-          txHash = await swapExactInput(signer, tokenIn, tokenOut, amount);
+          txHash = await swapExactInput(
+            signer,
+            tokenIn,
+            tokenOut,
+            amount,
+            3000,
+            0.5,
+            chain,
+          );
         } else if (protocol === "ambient") {
           txHash = await swapAmbient(signer, chain, tokenIn, tokenOut, amount);
         } else if (protocol === "velodrome" || protocol === "aerodrome") {
-          txHash = await swapVelodrome(signer, chain, tokenIn, tokenOut, amount);
+          txHash = await swapVelodrome(
+            signer,
+            chain,
+            tokenIn,
+            tokenOut,
+            amount,
+          );
         } else {
           txHash = await swapSyncSwap(signer, chain, tokenIn, tokenOut, amount);
         }
@@ -186,7 +247,10 @@ export async function executeTask(
         const tx = await signer.sendTransaction({ to, value: amount });
         const receipt = await tx.wait();
         txHash = receipt!.hash;
-        log.tx(txHash, `transfer ${formatEth(amount)} ETH → ${to.slice(0, 10)}... on ${task.chain}`);
+        log.tx(
+          txHash,
+          `transfer ${formatEth(amount)} ETH → ${to.slice(0, 10)}... on ${task.chain}`,
+        );
         break;
       }
 
@@ -232,7 +296,13 @@ export async function executeTask(
         const collection = task.params.collection as string;
         const tokenId = (task.params.tokenId as number) ?? 1;
         const quantity = (task.params.quantity as number) ?? 1;
-        txHash = await mintZoraNFT(signer, task.chain, collection, tokenId, quantity);
+        txHash = await mintZoraNFT(
+          signer,
+          task.chain,
+          collection,
+          tokenId,
+          quantity,
+        );
         break;
       }
 
@@ -254,16 +324,32 @@ export async function executeTask(
         const signer = getSigner(task.chain, privateKey);
         const market = task.params.market as string;
         const amount = (task.params.amountWei as bigint) ?? DEFAULT_AMOUNT;
-        txHash = await pendleSwapForPT(signer, task.chain, market, ethers.ZeroAddress, amount);
+        txHash = await pendleSwapForPT(
+          signer,
+          task.chain,
+          market,
+          ethers.ZeroAddress,
+          amount,
+        );
         break;
       }
 
       case "pendle_sell_pt": {
         const signer = getSigner(task.chain, privateKey);
         const market = task.params.market as string;
-        const ptBalance = await getPTBalance(getProvider(task.chain), market, await getSigner(task.chain, privateKey).getAddress());
+        const ptBalance = await getPTBalance(
+          getProvider(task.chain),
+          market,
+          await getSigner(task.chain, privateKey).getAddress(),
+        );
         if (ptBalance === 0n) throw new Error("No PT balance to sell");
-        txHash = await pendleSwapPTForToken(signer, task.chain, market, ethers.ZeroAddress, ptBalance);
+        txHash = await pendleSwapPTForToken(
+          signer,
+          task.chain,
+          market,
+          ethers.ZeroAddress,
+          ptBalance,
+        );
         break;
       }
 
@@ -272,13 +358,18 @@ export async function executeTask(
     }
 
     // Log gas cost to dashboard (fire-and-forget, don't block on errors)
-    const taskChain = (task.type === "bridge_to_l2" || task.type === "eigen_deposit" || task.type === "eigen_withdraw") ? "ethereum" : task.chain;
+    const taskChain =
+      task.type === "bridge_to_l2" ||
+      task.type === "eigen_deposit" ||
+      task.type === "eigen_withdraw"
+        ? "ethereum"
+        : task.chain;
     logTaskCost(
       taskChain,
       txHash,
       task.type,
       undefined,
-      task.description
+      task.description,
     ).catch(() => {});
 
     return {
@@ -300,7 +391,9 @@ export async function executeTask(
 }
 
 /** Run a full session of tasks for a single wallet */
-export async function runSession(session: FarmingSession): Promise<TaskResult[]> {
+export async function runSession(
+  session: FarmingSession,
+): Promise<TaskResult[]> {
   const wallets = loadWallets();
   const wallet = wallets.find((w) => w.index === session.walletIndex);
   if (!wallet) throw new Error(`Wallet #${session.walletIndex} not found`);
@@ -312,12 +405,16 @@ export async function runSession(session: FarmingSession): Promise<TaskResult[]>
     log.wallet(
       session.walletIndex,
       wallet.label,
-      `sleeping (active hours: ${session.personality.activeHoursStart}:00–${session.personality.activeHoursEnd}:00 UTC)`
+      `sleeping (active hours: ${session.personality.activeHoursStart}:00–${session.personality.activeHoursEnd}:00 UTC)`,
     );
     return [];
   }
 
-  log.wallet(session.walletIndex, wallet.label, `starting session (${session.tasks.length} tasks)`);
+  log.wallet(
+    session.walletIndex,
+    wallet.label,
+    `starting session (${session.tasks.length} tasks)`,
+  );
   log.divider();
 
   const results: TaskResult[] = [];
@@ -330,14 +427,22 @@ export async function runSession(session: FarmingSession): Promise<TaskResult[]>
     results.push(result);
 
     if (result.success) {
-      log.success(`Task ${i + 1}/${session.tasks.length} completed ${result.txHash ? `(${result.txHash.slice(0, 14)}...)` : ""}`);
+      log.success(
+        `Task ${i + 1}/${session.tasks.length} completed ${result.txHash ? `(${result.txHash.slice(0, 14)}...)` : ""}`,
+      );
     } else {
-      log.error(`Task ${i + 1}/${session.tasks.length} failed: ${result.error}`);
+      log.error(
+        `Task ${i + 1}/${session.tasks.length} failed: ${result.error}`,
+      );
     }
 
     // Delay between tasks (skip after the last one)
     if (i < session.tasks.length - 1) {
-      const delay = getDelay(session.personality, session.minDelayMs, session.maxDelayMs);
+      const delay = getDelay(
+        session.personality,
+        session.minDelayMs,
+        session.maxDelayMs,
+      );
       log.info(`Waiting ${describeDelay(delay)} before next task...`);
       await randomSleep(delay, delay);
     }
@@ -347,7 +452,7 @@ export async function runSession(session: FarmingSession): Promise<TaskResult[]>
   log.wallet(
     session.walletIndex,
     wallet.label,
-    `session done: ${succeeded}/${results.length} tasks succeeded`
+    `session done: ${succeeded}/${results.length} tasks succeeded`,
   );
   log.divider();
 
@@ -357,7 +462,7 @@ export async function runSession(session: FarmingSession): Promise<TaskResult[]>
 /** Run a sequence across the entire wallet fleet */
 export async function runFleetFarming(
   sequenceName: string,
-  options?: { walletIndices?: number[]; amountEth?: number }
+  options?: { walletIndices?: number[]; amountEth?: number },
 ): Promise<void> {
   const allWallets = loadWallets();
   if (allWallets.length === 0) {
@@ -376,7 +481,9 @@ export async function runFleetFarming(
   // Shuffle wallet order for randomization
   const shuffledWallets = shuffle(wallets);
 
-  log.info(`Fleet farming: "${sequence.name}" across ${shuffledWallets.length} wallets`);
+  log.info(
+    `Fleet farming: "${sequence.name}" across ${shuffledWallets.length} wallets`,
+  );
   log.info(`Amount per task: ~${formatEth(amountWei)} ETH`);
   log.divider();
 
@@ -400,8 +507,8 @@ export async function runFleetFarming(
       walletIndex: wallet.index,
       tasks,
       personality,
-      minDelayMs: 30_000,   // 30 seconds minimum between tasks
-      maxDelayMs: 300_000,  // 5 minutes maximum between tasks
+      minDelayMs: 30_000, // 30 seconds minimum between tasks
+      maxDelayMs: 300_000, // 5 minutes maximum between tasks
     };
 
     const results = await runSession(session);
@@ -424,8 +531,14 @@ export async function runFleetFarming(
     const succeeded = results.filter((r) => r.success).length;
     totalTasks += results.length;
     totalSuccess += succeeded;
-    log.wallet(walletIndex, `wallet-${walletIndex}`, `${succeeded}/${results.length} tasks`);
+    log.wallet(
+      walletIndex,
+      `wallet-${walletIndex}`,
+      `${succeeded}/${results.length} tasks`,
+    );
   }
-  log.success(`Total: ${totalSuccess}/${totalTasks} tasks succeeded across ${allResults.length} wallets`);
+  log.success(
+    `Total: ${totalSuccess}/${totalTasks} tasks succeeded across ${allResults.length} wallets`,
+  );
   log.divider();
 }

@@ -3,8 +3,19 @@ import { ethers } from "ethers";
 import { loadWallets, getPrivateKey } from "./wallet-manager.js";
 import { getProvider } from "./chains/index.js";
 import { safeExecuteTask, sendSessionSummary } from "./safety/index.js";
-import { generatePersonality, shouldBeActive, getDelay } from "./tasks/personality.js";
-import { randInt, shuffle, pickRandom, jitterAmount, randomSleep, describeDelay } from "./utils/random.js";
+import {
+  generatePersonality,
+  shouldBeActive,
+  getDelay,
+} from "./tasks/personality.js";
+import {
+  randInt,
+  shuffle,
+  pickRandom,
+  jitterAmount,
+  randomSleep,
+  describeDelay,
+} from "./utils/random.js";
 import { formatEth } from "./utils/gas.js";
 import { log } from "./utils/logger.js";
 import type { Task } from "./tasks/types.js";
@@ -16,8 +27,18 @@ const MIN_BALANCE = ethers.parseEther("0.0005");
 /** Amount per task (0.0003 ETH — small to preserve funds) */
 const TASK_AMOUNT = ethers.parseEther("0.0003");
 
-/** L2 chains we farm on */
-const L2_CHAINS = ["base", "scroll", "linea", "zksync", "arbitrum", "optimism"];
+/** Chains we farm on (L2s + new wave — mainnet only) */
+const L2_CHAINS = [
+  "base",
+  "scroll",
+  "linea",
+  "zksync",
+  "arbitrum",
+  "optimism",
+  "megaeth",
+  "abstract",
+  "unichain",
+];
 
 /** DEX protocol per chain */
 const DEX_PROTOCOL: Record<string, string> = {
@@ -27,6 +48,9 @@ const DEX_PROTOCOL: Record<string, string> = {
   zksync: "syncswap",
   arbitrum: "uniswap-v3",
   optimism: "velodrome",
+  megaeth: "megaeth-native", // No established DEX yet — wrap/deploy only for now
+  abstract: "uniswap-v3",
+  unichain: "uniswap-v3",
 };
 
 /** Alternate DEX per chain (for diversity) */
@@ -36,73 +60,181 @@ const ALT_DEX: Record<string, string> = {
 };
 
 /** Chains with Aave V3 */
-const AAVE_CHAINS = new Set(["base", "scroll", "linea", "arbitrum", "optimism"]);
+const AAVE_CHAINS = new Set([
+  "base",
+  "scroll",
+  "linea",
+  "arbitrum",
+  "optimism",
+]);
 
 /** Available task templates for L2 activity (no bridge) */
 function getTaskPool(chain: string): Task[] {
   const protocol = DEX_PROTOCOL[chain];
   return [
-    { type: "wrap_eth", chain, params: {}, description: `Wrap ETH → WETH on ${chain}` },
-    { type: "unwrap_eth", chain, params: {}, description: `Unwrap WETH → ETH on ${chain}` },
-    { type: "dex_swap", chain, protocol, params: { tokenIn: "ETH", tokenOut: "USDC" }, description: `Swap ETH → USDC on ${chain} (${protocol})` },
-    { type: "dex_swap", chain, protocol, params: { tokenIn: "USDC", tokenOut: "ETH" }, description: `Swap USDC → ETH on ${chain} (${protocol})` },
-    { type: "deploy_contract", chain, params: {}, description: `Deploy contract on ${chain}` },
+    {
+      type: "wrap_eth",
+      chain,
+      params: {},
+      description: `Wrap ETH → WETH on ${chain}`,
+    },
+    {
+      type: "unwrap_eth",
+      chain,
+      params: {},
+      description: `Unwrap WETH → ETH on ${chain}`,
+    },
+    {
+      type: "dex_swap",
+      chain,
+      protocol,
+      params: { tokenIn: "ETH", tokenOut: "USDC" },
+      description: `Swap ETH → USDC on ${chain} (${protocol})`,
+    },
+    {
+      type: "dex_swap",
+      chain,
+      protocol,
+      params: { tokenIn: "USDC", tokenOut: "ETH" },
+      description: `Swap USDC → ETH on ${chain} (${protocol})`,
+    },
+    {
+      type: "deploy_contract",
+      chain,
+      params: {},
+      description: `Deploy contract on ${chain}`,
+    },
   ];
 }
 
 /** Chains where DEX swaps are confirmed working */
-const SWAP_CHAINS = new Set(["base", "scroll", "linea", "zksync", "arbitrum", "optimism"]);
+const SWAP_CHAINS = new Set([
+  "base",
+  "scroll",
+  "linea",
+  "zksync",
+  "arbitrum",
+  "optimism",
+  "abstract",
+  "unichain",
+]);
 
 /** Pick a random set of 2-5 tasks for a chain */
 function pickTasks(chain: string): Task[] {
   const canSwap = SWAP_CHAINS.has(chain);
   const doSwapRoundTrip = canSwap && Math.random() < 0.6;
   const doWrapUnwrap = Math.random() < 0.7;
-  const doDeploy = Math.random() < 0.12;
+  // Higher deploy rate on new chains — contract deploys are high-signal for airdrops
+  const doDeploy =
+    chain === "megaeth" || chain === "abstract" || chain === "unichain"
+      ? Math.random() < 0.4
+      : Math.random() < 0.12;
   const doAave = AAVE_CHAINS.has(chain) && Math.random() < 0.3;
   const doAltDex = ALT_DEX[chain] && Math.random() < 0.25;
-  const doOrbiterBridge = Math.random() < 0.15;
+  // Only bridge between established L2s (not new chains yet)
+  const doOrbiterBridge =
+    chain !== "megaeth" && chain !== "abstract" && Math.random() < 0.15;
   const doZoraMint = chain === "base" && Math.random() < 0.1;
 
   const protocol = DEX_PROTOCOL[chain];
   const tasks: Task[] = [];
 
   if (doWrapUnwrap) {
-    tasks.push({ type: "wrap_eth", chain, params: {}, description: `Wrap ETH → WETH on ${chain}` });
+    tasks.push({
+      type: "wrap_eth",
+      chain,
+      params: {},
+      description: `Wrap ETH → WETH on ${chain}`,
+    });
   }
 
-  if (doSwapRoundTrip) {
+  // MegaETH has no established DEX yet — skip swaps
+  if (doSwapRoundTrip && protocol !== "megaeth-native") {
     const dex = doAltDex ? ALT_DEX[chain] : protocol;
     tasks.push(
-      { type: "dex_swap", chain, protocol: dex, params: { tokenIn: "ETH", tokenOut: "USDC" }, description: `Swap ETH → USDC on ${chain} (${dex})` },
-      { type: "dex_swap", chain, protocol: dex, params: { tokenIn: "USDC", tokenOut: "ETH" }, description: `Swap USDC → ETH on ${chain} (${dex})` },
+      {
+        type: "dex_swap",
+        chain,
+        protocol: dex,
+        params: { tokenIn: "ETH", tokenOut: "USDC" },
+        description: `Swap ETH → USDC on ${chain} (${dex})`,
+      },
+      {
+        type: "dex_swap",
+        chain,
+        protocol: dex,
+        params: { tokenIn: "USDC", tokenOut: "ETH" },
+        description: `Swap USDC → ETH on ${chain} (${dex})`,
+      },
     );
   }
 
   if (doAave) {
     tasks.push(
-      { type: "aave_supply", chain, protocol: "aave-v3", params: {}, description: `Supply ETH to Aave V3 on ${chain}` },
-      { type: "aave_withdraw", chain, protocol: "aave-v3", params: {}, description: `Withdraw from Aave V3 on ${chain}` },
+      {
+        type: "aave_supply",
+        chain,
+        protocol: "aave-v3",
+        params: {},
+        description: `Supply ETH to Aave V3 on ${chain}`,
+      },
+      {
+        type: "aave_withdraw",
+        chain,
+        protocol: "aave-v3",
+        params: {},
+        description: `Withdraw from Aave V3 on ${chain}`,
+      },
     );
   }
 
   if (doWrapUnwrap) {
-    tasks.push({ type: "unwrap_eth", chain, params: {}, description: `Unwrap WETH → ETH on ${chain}` });
+    tasks.push({
+      type: "unwrap_eth",
+      chain,
+      params: {},
+      description: `Unwrap WETH → ETH on ${chain}`,
+    });
   }
 
   if (doDeploy) {
-    tasks.push({ type: "deploy_contract", chain, params: {}, description: `Deploy contract on ${chain}` });
+    tasks.push({
+      type: "deploy_contract",
+      chain,
+      params: {},
+      description: `Deploy contract on ${chain}`,
+    });
   }
 
   if (doOrbiterBridge) {
-    // Pick a random destination chain different from current
-    const otherChains = L2_CHAINS.filter((c) => c !== chain);
+    // Pick a random destination chain different from current (only established L2s)
+    const bridgeableChains = [
+      "base",
+      "scroll",
+      "linea",
+      "zksync",
+      "arbitrum",
+      "optimism",
+    ];
+    const otherChains = bridgeableChains.filter((c) => c !== chain);
     const toChain = otherChains[Math.floor(Math.random() * otherChains.length)];
-    tasks.push({ type: "bridge_orbiter", chain, protocol: "orbiter", params: { toChain }, description: `Orbiter bridge ${chain} → ${toChain}` });
+    tasks.push({
+      type: "bridge_orbiter",
+      chain,
+      protocol: "orbiter",
+      params: { toChain },
+      description: `Orbiter bridge ${chain} → ${toChain}`,
+    });
   }
 
   if (doZoraMint) {
-    tasks.push({ type: "create_nft_collection", chain, protocol: "zora", params: {}, description: `Create Zora NFT collection on ${chain}` });
+    tasks.push({
+      type: "create_nft_collection",
+      chain,
+      protocol: "zora",
+      params: {},
+      description: `Create Zora NFT collection on ${chain}`,
+    });
   }
 
   // Pendle PT round-trip (Arbitrum only, ~10% chance)
@@ -110,8 +242,20 @@ function pickTasks(chain: string): Task[] {
     const market = Object.values(PENDLE_MARKETS.arbitrum ?? {})[0];
     if (market) {
       tasks.push(
-        { type: "pendle_buy_pt", chain, protocol: "pendle", params: { market }, description: `Buy PT on Pendle (${chain})` },
-        { type: "pendle_sell_pt", chain, protocol: "pendle", params: { market }, description: `Sell PT on Pendle (${chain})` },
+        {
+          type: "pendle_buy_pt",
+          chain,
+          protocol: "pendle",
+          params: { market },
+          description: `Buy PT on Pendle (${chain})`,
+        },
+        {
+          type: "pendle_sell_pt",
+          chain,
+          protocol: "pendle",
+          params: { market },
+          description: `Sell PT on Pendle (${chain})`,
+        },
       );
     }
   }
@@ -119,8 +263,18 @@ function pickTasks(chain: string): Task[] {
   // Ensure at least 2 tasks
   if (tasks.length < 2) {
     tasks.push(
-      { type: "wrap_eth", chain, params: {}, description: `Wrap ETH → WETH on ${chain}` },
-      { type: "unwrap_eth", chain, params: {}, description: `Unwrap WETH → ETH on ${chain}` },
+      {
+        type: "wrap_eth",
+        chain,
+        params: {},
+        description: `Wrap ETH → WETH on ${chain}`,
+      },
+      {
+        type: "unwrap_eth",
+        chain,
+        params: {},
+        description: `Unwrap WETH → ETH on ${chain}`,
+      },
     );
   }
 
@@ -145,10 +299,16 @@ async function main(): Promise<void> {
   }
 
   log.divider();
-  log.info(`Checking balances for ${wallets.length} wallets across ${L2_CHAINS.length} L2 chains...`);
+  log.info(
+    `Checking balances for ${wallets.length} wallets across ${L2_CHAINS.length} L2 chains...`,
+  );
 
   // Find wallets with funds on L2s
-  const fundedWallets: { wallet: typeof wallets[0]; chain: string; balance: bigint }[] = [];
+  const fundedWallets: {
+    wallet: (typeof wallets)[0];
+    chain: string;
+    balance: bigint;
+  }[] = [];
 
   for (const wallet of wallets) {
     for (const chain of L2_CHAINS) {
@@ -157,7 +317,9 @@ async function main(): Promise<void> {
         const balance = await provider.getBalance(wallet.address);
         if (balance >= MIN_BALANCE) {
           fundedWallets.push({ wallet, chain, balance });
-          log.info(`  W${String(wallet.index).padStart(2, "0")} on ${chain}: ${formatEth(balance)} ETH`);
+          log.info(
+            `  W${String(wallet.index).padStart(2, "0")} on ${chain}: ${formatEth(balance)} ETH`,
+          );
         }
       } catch {
         // RPC error — skip
@@ -171,12 +333,17 @@ async function main(): Promise<void> {
   }
 
   // Shuffle and pick 1-3 wallet+chain combos to farm this round
-  const selected = pickRandom(fundedWallets, Math.min(randInt(1, 3), fundedWallets.length));
+  const selected = pickRandom(
+    fundedWallets,
+    Math.min(randInt(1, 3), fundedWallets.length),
+  );
 
   log.divider();
   log.info(`Selected ${selected.length} farming target(s) for this round:`);
   for (const s of selected) {
-    log.info(`  W${String(s.wallet.index).padStart(2, "0")} → ${s.chain} (${formatEth(s.balance)} ETH)`);
+    log.info(
+      `  W${String(s.wallet.index).padStart(2, "0")} → ${s.chain} (${formatEth(s.balance)} ETH)`,
+    );
   }
   log.divider();
 
@@ -189,7 +356,9 @@ async function main(): Promise<void> {
 
     // Check active hours
     if (!shouldBeActive(personality)) {
-      log.info(`W${String(wallet.index).padStart(2, "0")} sleeping (outside active hours). Skipping.`);
+      log.info(
+        `W${String(wallet.index).padStart(2, "0")} sleeping (outside active hours). Skipping.`,
+      );
       continue;
     }
 
@@ -198,10 +367,17 @@ async function main(): Promise<void> {
 
     // Apply amount jitter to each task
     for (const task of tasks) {
-      task.params.amountWei = jitterAmount(TASK_AMOUNT, personality.amountJitter);
+      task.params.amountWei = jitterAmount(
+        TASK_AMOUNT,
+        personality.amountJitter,
+      );
     }
 
-    log.wallet(wallet.index, wallet.label, `farming ${chain} (${tasks.length} tasks)`);
+    log.wallet(
+      wallet.index,
+      wallet.label,
+      `farming ${chain} (${tasks.length} tasks)`,
+    );
 
     for (let i = 0; i < tasks.length; i++) {
       const task = tasks[i];
@@ -212,7 +388,9 @@ async function main(): Promise<void> {
 
       if (result.success) {
         totalSuccess++;
-        log.success(`Task ${i + 1}/${tasks.length} completed ${result.txHash ? `(${result.txHash.slice(0, 14)}...)` : ""}`);
+        log.success(
+          `Task ${i + 1}/${tasks.length} completed ${result.txHash ? `(${result.txHash.slice(0, 14)}...)` : ""}`,
+        );
       } else {
         log.error(`Task ${i + 1}/${tasks.length} failed: ${result.error}`);
       }
@@ -250,12 +428,16 @@ async function main(): Promise<void> {
             params: { amountWei: eigenAmount },
             description: "Deposit into EigenLayer (Ethereum mainnet)",
           };
-          log.info(`EigenLayer: attempting deposit with W${String(eigenWallet.index).padStart(2, "0")} (${formatEth(l1Balance)} ETH on L1)`);
+          log.info(
+            `EigenLayer: attempting deposit with W${String(eigenWallet.index).padStart(2, "0")} (${formatEth(l1Balance)} ETH on L1)`,
+          );
           const result = await safeExecuteTask(eigenKey, eigenTask);
           totalTasks++;
           if (result.success) {
             totalSuccess++;
-            log.success(`EigenLayer deposit completed ${result.txHash ? `(${result.txHash.slice(0, 14)}...)` : ""}`);
+            log.success(
+              `EigenLayer deposit completed ${result.txHash ? `(${result.txHash.slice(0, 14)}...)` : ""}`,
+            );
           } else {
             log.error(`EigenLayer deposit failed: ${result.error}`);
           }
@@ -267,7 +449,9 @@ async function main(): Promise<void> {
   }
 
   log.divider();
-  log.success(`Scheduled farm complete: ${totalSuccess}/${totalTasks} tasks succeeded`);
+  log.success(
+    `Scheduled farm complete: ${totalSuccess}/${totalTasks} tasks succeeded`,
+  );
 
   // Send Telegram summary
   const chains = [...new Set(selected.map((s) => s.chain))];
@@ -275,6 +459,8 @@ async function main(): Promise<void> {
 }
 
 main().catch((err) => {
-  log.error(`Scheduled farm crashed: ${err instanceof Error ? err.message : String(err)}`);
+  log.error(
+    `Scheduled farm crashed: ${err instanceof Error ? err.message : String(err)}`,
+  );
   process.exit(1);
 });

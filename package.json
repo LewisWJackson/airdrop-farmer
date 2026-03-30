@@ -1,5 +1,5 @@
 {
-  "name": "airdrop-farmer",
+  "name": "jackson-airdrop-farm",
   "version": "1.0.0",
   "type": "module",
   "scripts": {
@@ -8,7 +8,12 @@
     "run:auto": "tsx src/auto.ts",
     "schedule": "tsx src/scheduled-farm.ts",
     "fund": "tsx src/fund-all-chains.ts",
-    "distribute": "tsx src/distribute-wallets.ts"
+    "distribute": "tsx src/distribute-wallets.ts",
+    "launch-new-wave": "tsx src/launch-new-wave.ts",
+    "start:pm2": "pm2 start ecosystem.config.cjs && pm2 save",
+    "start:railway": "tsx src/run-railway.ts",
+    "setup": "tsx src/index.ts",
+    "balances": "tsx src/check-all-balances.ts"
   },
   "dependencies": {
     "ethers": "^6.13.4",
@@ -23,5 +28,8 @@
     "@types/node": "^22.10.5",
     "tsx": "^4.19.2",
     "typescript": "^5.7.3"
-  }
+  },
+  "description": "Automated on-chain activity farming for MegaETH, Abstract, and Unichain airdrops",
+  "author": "Lewis Jackson",
+  "license": "MIT"
 }
