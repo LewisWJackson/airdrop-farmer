@@ -1,0 +1,397 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Naive Approach</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        background: #1a1a1a;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        font-family: "SF Mono", "Fira Code", "Monaco", "Consolas", monospace;
+      }
+      .window {
+        width: 860px;
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 30px 80px rgba(0, 0, 0, 0.8);
+      }
+      .titlebar {
+        background: #2d2d2d;
+        padding: 12px 16px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        border-bottom: 1px solid #1a1a1a;
+      }
+      .dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+      }
+      .dot.red {
+        background: #ff5f57;
+      }
+      .dot.yellow {
+        background: #febc2e;
+      }
+      .dot.green {
+        background: #28c840;
+      }
+      .titlebar-label {
+        margin: 0 auto;
+        color: #888;
+        font-size: 12px;
+        letter-spacing: 0.3px;
+      }
+
+      .terminal {
+        background: #1e1e1e;
+        padding: 28px 32px 36px;
+        font-size: 14px;
+        line-height: 1.7;
+        color: #d4d4d4;
+        min-height: 420px;
+      }
+
+      .row {
+        opacity: 0;
+        transform: translateY(6px);
+        transition:
+          opacity 0.4s ease,
+          transform 0.4s ease;
+      }
+      .row.show {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      .prompt {
+        color: #4ec9b0;
+        margin-right: 8px;
+      }
+      .cmd {
+        color: #d4d4d4;
+      }
+      .dim {
+        color: #555;
+      }
+
+      /* Section header */
+      .section-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin: 14px 0 10px;
+        opacity: 0;
+        transform: translateY(6px);
+        transition:
+          opacity 0.4s ease,
+          transform 0.4s ease;
+      }
+      .section-header.show {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      .section-badge {
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 1px;
+        padding: 2px 8px;
+        border-radius: 3px;
+        flex-shrink: 0;
+        background: rgba(244, 71, 71, 0.12);
+        color: #f44747;
+        border: 1px solid rgba(244, 71, 71, 0.3);
+      }
+      .section-label {
+        font-size: 15px;
+        font-weight: 700;
+        color: #f44747;
+      }
+      .section-note {
+        color: #444;
+        font-size: 12px;
+        letter-spacing: 0.5px;
+      }
+
+      /* Stat rows */
+      .stat-row {
+        display: flex;
+        align-items: baseline;
+        margin-bottom: 4px;
+        margin-left: 28px;
+        opacity: 0;
+        transform: translateY(5px);
+        transition:
+          opacity 0.35s ease,
+          transform 0.35s ease;
+      }
+      .stat-row.show {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      .stat-key {
+        color: #555;
+        width: 220px;
+        flex-shrink: 0;
+        font-size: 14px;
+      }
+      .stat-val {
+        font-weight: 700;
+        font-size: 15px;
+        color: #d4d4d4;
+      }
+
+      /* Schedule section label */
+      .sched-label {
+        color: #444;
+        font-size: 12px;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        margin: 10px 0 6px 28px;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+      }
+      .sched-label.show {
+        opacity: 1;
+      }
+
+      /* Schedule rows */
+      .sched-row {
+        display: flex;
+        align-items: baseline;
+        margin-bottom: 3px;
+        margin-left: 28px;
+        opacity: 0;
+        transform: translateY(4px);
+        transition:
+          opacity 0.35s ease,
+          transform 0.35s ease;
+      }
+      .sched-row.show {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      .sched-day {
+        color: #666;
+        width: 140px;
+        flex-shrink: 0;
+        font-size: 13px;
+      }
+      .sched-arrow {
+        color: #333;
+        margin-right: 10px;
+        font-size: 13px;
+      }
+      .sched-action {
+        font-size: 14px;
+        font-weight: 600;
+      }
+      .action-red {
+        color: #f44747;
+      }
+      .action-orange {
+        color: #ce9178;
+      }
+      .action-yellow {
+        color: #febc2e;
+      }
+      .action-purple {
+        color: #c586c0;
+      }
+
+      /* Warning summary */
+      .summary-bar {
+        margin-top: 18px;
+        padding: 12px 16px;
+        background: rgba(244, 71, 71, 0.07);
+        border: 1px solid rgba(244, 71, 71, 0.25);
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        opacity: 0;
+        transform: translateY(6px);
+        transition:
+          opacity 0.5s ease,
+          transform 0.5s ease;
+      }
+      .summary-bar.show {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      .warn-icon {
+        color: #f44747;
+        font-size: 15px;
+        flex-shrink: 0;
+      }
+      .warn-text {
+        color: #888;
+        font-size: 13px;
+      }
+      .warn-text strong {
+        color: #f44747;
+        font-weight: 700;
+      }
+
+      .cursor {
+        display: inline-block;
+        width: 8px;
+        height: 14px;
+        background: #d4d4d4;
+        vertical-align: text-bottom;
+        margin-left: 3px;
+        animation: blink 1s step-end infinite;
+      }
+      @keyframes blink {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="window">
+      <div class="titlebar">
+        <div class="dot red"></div>
+        <div class="dot yellow"></div>
+        <div class="dot green"></div>
+        <div class="titlebar-label">
+          activity-check — naive strategy analysis
+        </div>
+      </div>
+      <div class="terminal">
+        <div class="row" id="prompt">
+          <span class="prompt">→</span>
+          <span class="cmd"
+            >activity-check
+            <span class="dim">--analyse naive-wallet-1</span></span
+          >
+        </div>
+
+        <!-- ~0.5s: "naive way to do airdrop farming" -->
+        <div class="section-header" id="header">
+          <span class="section-badge">NAIVE</span>
+          <span class="section-label">One Wallet — Fixed Schedule</span>
+        </div>
+
+        <!-- ~2.3s: "is to have one wallet" -->
+        <div class="stat-row" id="s-wallets">
+          <span class="stat-key">Wallet count</span>
+          <span class="stat-val">1</span>
+        </div>
+
+        <!-- ~4.2s: "set up a schedule" -->
+        <div class="stat-row" id="s-schedule">
+          <span class="stat-key">Strategy</span>
+          <span class="stat-val">rigid schedule — same every week</span>
+        </div>
+
+        <div class="sched-label" id="sched-title">Weekly schedule</div>
+
+        <!-- ~7.0s: "every day I'm going to do this type of transaction" -->
+        <div class="sched-row" id="sc-daily">
+          <span class="sched-day">Mon – Sun</span>
+          <span class="sched-arrow">→</span>
+          <span class="sched-action action-red">transaction</span>
+        </div>
+
+        <!-- ~9.3s: "every Tuesday I'm going to do a smart contract deployment" -->
+        <div class="sched-row" id="sc-tue">
+          <span class="sched-day">every Tuesday</span>
+          <span class="sched-arrow">→</span>
+          <span class="sched-action action-orange">smart contract deploy</span>
+        </div>
+
+        <!-- ~13.3s: "every Thursday I'm going to do some sort of like lending thing" -->
+        <div class="sched-row" id="sc-thu">
+          <span class="sched-day">every Thursday</span>
+          <span class="sched-arrow">→</span>
+          <span class="sched-action action-yellow">lending protocol</span>
+        </div>
+
+        <!-- ~16.1s: "Then I'm going to swap on a Friday" -->
+        <div class="sched-row" id="sc-fri">
+          <span class="sched-day">every Friday</span>
+          <span class="sched-arrow">→</span>
+          <span class="sched-action action-purple">token swap</span>
+        </div>
+
+        <!-- ~17.0s: warning -->
+        <div class="summary-bar" id="summary">
+          <span class="warn-icon">⚠</span>
+          <span class="warn-text">
+            <strong>Readable pattern.</strong> Identical schedule every week —
+            trivial to flag as bot.<span class="cursor"></span>
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      function at(ms, fn) {
+        setTimeout(fn, ms);
+      }
+
+      // ── TIMING (00:12:45:10 → 00:13:02:22 = ~17.4s) ────────────────
+      // t=0    — "the naive way to do"
+      // t=2.3  — "airdrop farming is to have"  → one wallet
+      // t=4.1  — "one wallet and set up a schedule where"
+      // t=6.9  — "every day I'm going to do this type of transaction"
+      // t=9.2  — "every Tuesday I'm going to" + "smart contract deployment"
+      // t=13.2 — "Thursday I'm going to" + "lending thing"
+      // t=16.0 — "swap on a Friday"
+      // t=17.4 — end
+
+      at(300, () => document.getElementById("prompt").classList.add("show"));
+
+      // ~0.5s — "naive way to do airdrop farming"
+      at(500, () => document.getElementById("header").classList.add("show"));
+
+      // ~2.3s — "is to have [one wallet]"
+      at(2300, () =>
+        document.getElementById("s-wallets").classList.add("show"),
+      );
+
+      // ~4.2s — "set up a schedule"
+      at(4200, () => {
+        document.getElementById("s-schedule").classList.add("show");
+        setTimeout(
+          () => document.getElementById("sched-title").classList.add("show"),
+          400,
+        );
+      });
+
+      // ~7.0s — "every day… transaction"
+      at(7000, () => document.getElementById("sc-daily").classList.add("show"));
+
+      // ~9.3s — "every Tuesday… smart contract deployment"
+      at(9300, () => document.getElementById("sc-tue").classList.add("show"));
+
+      // ~13.3s — "Thursday… lending thing"
+      at(13300, () => document.getElementById("sc-thu").classList.add("show"));
+
+      // ~16.1s — "swap on a Friday"
+      at(16100, () => document.getElementById("sc-fri").classList.add("show"));
+
+      // ~17.0s — warning summary
+      at(17000, () => document.getElementById("summary").classList.add("show"));
+    </script>
+  </body>
+</html>

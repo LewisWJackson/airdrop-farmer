@@ -1,0 +1,1331 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>GitHub Repo</title>
+    <style>
+      *,
+      *::before,
+      *::after {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        background: #141414;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        font-family: "SF Mono", "Fira Code", monospace;
+      }
+
+      .window {
+        width: 860px;
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 30px 80px rgba(0, 0, 0, 0.8);
+        position: relative;
+      }
+
+      /* ── CURSOR ── */
+      #cursor {
+        position: fixed;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.9);
+        box-shadow:
+          0 0 0 2px rgba(0, 0, 0, 0.5),
+          0 2px 8px rgba(0, 0, 0, 0.6);
+        pointer-events: none;
+        z-index: 9999;
+        transform: translate(-50%, -50%);
+        opacity: 0;
+        transition:
+          width 0.08s,
+          height 0.08s,
+          background 0.08s,
+          opacity 0.3s;
+      }
+      #cursor.visible {
+        opacity: 1;
+      }
+      #cursor.clicking {
+        width: 12px;
+        height: 12px;
+        background: rgba(255, 255, 255, 0.6);
+      }
+
+      /* ── PHASE SYSTEM ── */
+      .phase {
+        opacity: 0;
+        transition: opacity 0.5s ease;
+        pointer-events: none;
+      }
+      .phase.active {
+        opacity: 1;
+      }
+
+      /* ════════════════════════════════════════
+         PHASE 1: YouTube Description
+      ════════════════════════════════════════ */
+      #yt-phase {
+        background: #0f0f0f;
+      }
+      .yt-titlebar {
+        background: #2d2d2d;
+        padding: 12px 16px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        border-bottom: 1px solid #1a1a1a;
+      }
+      .dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+      }
+      .dot.r {
+        background: #ff5f57;
+      }
+      .dot.y {
+        background: #febc2e;
+      }
+      .dot.g {
+        background: #28c840;
+      }
+      .yt-titlebar-label {
+        margin: 0 auto;
+        color: #666;
+        font-size: 12px;
+        letter-spacing: 0.3px;
+      }
+
+      .yt-body {
+        background: #0f0f0f;
+        padding: 28px 32px 32px;
+        min-height: 520px;
+      }
+
+      /* Video card row */
+      .yt-video-card {
+        display: flex;
+        gap: 16px;
+        margin-bottom: 28px;
+        opacity: 0;
+        transform: translateY(8px);
+        transition:
+          opacity 0.4s ease,
+          transform 0.4s ease;
+      }
+      .yt-video-card.show {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      .yt-thumb {
+        width: 168px;
+        height: 95px;
+        border-radius: 6px;
+        background: linear-gradient(
+          135deg,
+          #1a1040 0%,
+          #2d1b69 50%,
+          #0d2137 100%
+        );
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 32px;
+        position: relative;
+        overflow: hidden;
+      }
+      .yt-thumb-duration {
+        position: absolute;
+        bottom: 5px;
+        right: 6px;
+        font-size: 11px;
+        font-weight: 700;
+        color: #fff;
+        background: rgba(0, 0, 0, 0.8);
+        padding: 1px 5px;
+        border-radius: 3px;
+      }
+      .yt-video-meta {
+        flex: 1;
+      }
+      .yt-video-title {
+        font-size: 14px;
+        font-weight: 700;
+        color: #f1f1f1;
+        line-height: 1.4;
+        margin-bottom: 6px;
+        font-family: "Roboto", Arial, sans-serif;
+      }
+      .yt-channel-name {
+        font-size: 12px;
+        color: #aaa;
+        margin-bottom: 3px;
+        font-family: "Roboto", Arial, sans-serif;
+      }
+      .yt-video-stats {
+        font-size: 12px;
+        color: #717171;
+        font-family: "Roboto", Arial, sans-serif;
+      }
+
+      /* Description box */
+      .yt-desc-card {
+        background: #272727;
+        border-radius: 10px;
+        padding: 16px 18px;
+        opacity: 0;
+        transform: translateY(8px);
+        transition:
+          opacity 0.45s ease,
+          transform 0.45s ease;
+      }
+      .yt-desc-card.show {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      .yt-desc-stats {
+        display: flex;
+        gap: 12px;
+        font-size: 13px;
+        font-weight: 700;
+        color: #f1f1f1;
+        margin-bottom: 10px;
+        font-family: "Roboto", Arial, sans-serif;
+      }
+      .yt-desc-stats span {
+        color: #aaa;
+        font-weight: 400;
+      }
+
+      .yt-desc-line {
+        font-size: 13px;
+        color: #ccc;
+        line-height: 1.6;
+        margin-bottom: 4px;
+        font-family: "Roboto", Arial, sans-serif;
+        opacity: 0;
+        transition: opacity 0.35s ease;
+      }
+      .yt-desc-line.show {
+        opacity: 1;
+      }
+
+      .yt-link-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin: 12px 0 4px;
+        padding: 10px 14px;
+        background: rgba(88, 166, 255, 0.08);
+        border: 1px solid rgba(88, 166, 255, 0.2);
+        border-radius: 8px;
+        opacity: 0;
+        transform: translateY(5px);
+        transition:
+          opacity 0.4s ease,
+          transform 0.4s ease;
+      }
+      .yt-link-row.show {
+        opacity: 1;
+        transform: translateY(0);
+      }
+      .yt-link-row.glow {
+        background: rgba(88, 166, 255, 0.14);
+        border-color: rgba(88, 166, 255, 0.4);
+        box-shadow: 0 0 16px rgba(88, 166, 255, 0.18);
+      }
+
+      .yt-setup-badge {
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 1px;
+        padding: 3px 10px;
+        border-radius: 4px;
+        background: rgba(63, 185, 80, 0.15);
+        color: #3fb950;
+        border: 1px solid rgba(63, 185, 80, 0.3);
+        white-space: nowrap;
+        flex-shrink: 0;
+        font-family: monospace;
+      }
+      .yt-gh-link {
+        font-size: 13px;
+        color: #58a6ff;
+        font-family: monospace;
+        word-break: break-all;
+      }
+      .yt-desc-pin {
+        font-size: 12px;
+        color: #717171;
+        font-family: "Roboto", Arial, sans-serif;
+      }
+
+      /* ════════════════════════════════════════
+         PHASE 2: GitHub Browser
+      ════════════════════════════════════════ */
+      #gh-phase {
+        background: #0d1117;
+      }
+
+      .browser-bar {
+        background: #21262d;
+        padding: 0 14px;
+        height: 44px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        border-bottom: 1px solid #30363d;
+      }
+      .b-dots {
+        display: flex;
+        gap: 7px;
+      }
+      .b-dot {
+        width: 11px;
+        height: 11px;
+        border-radius: 50%;
+      }
+      .b-dot.r {
+        background: #ff5f57;
+      }
+      .b-dot.y {
+        background: #febc2e;
+      }
+      .b-dot.g {
+        background: #28c840;
+      }
+      .b-nav-btns {
+        display: flex;
+        gap: 6px;
+      }
+      .b-nav-btn {
+        font-size: 14px;
+        color: #58a6ff;
+        cursor: pointer;
+        padding: 4px 6px;
+        border-radius: 4px;
+      }
+      .url-bar {
+        flex: 1;
+        background: #0d1117;
+        border: 1px solid #30363d;
+        border-radius: 6px;
+        padding: 5px 12px;
+        font-size: 12px;
+        color: #8b949e;
+        font-family: -apple-system, sans-serif;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        overflow: hidden;
+        white-space: nowrap;
+      }
+      .url-lock {
+        color: #3fb950;
+        font-size: 11px;
+      }
+      .url-text {
+        color: #c9d1d9;
+      }
+      .url-dim {
+        color: #656d76;
+      }
+
+      /* Viewport with hidden overflow for scroll */
+      .gh-viewport {
+        height: 536px;
+        overflow: hidden;
+        position: relative;
+      }
+
+      #gh-scroll {
+        transform: translateY(0);
+        /* transition set by JS */
+      }
+
+      /* GitHub Navbar */
+      .gh-nav {
+        background: #161b22;
+        border-bottom: 1px solid #30363d;
+        padding: 0 20px;
+        height: 48px;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+      .gh-logo {
+        font-size: 22px;
+        color: #e6edf3;
+      }
+      .gh-nav-link {
+        font-size: 13px;
+        font-weight: 600;
+        color: #e6edf3;
+        font-family: -apple-system, "Segoe UI", sans-serif;
+        padding: 4px 8px;
+        border-radius: 6px;
+        cursor: pointer;
+      }
+      .gh-nav-link:hover {
+        background: rgba(255, 255, 255, 0.08);
+      }
+      .gh-nav-right {
+        margin-left: auto;
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      .gh-avatar {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: #2ea043;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 13px;
+      }
+
+      /* Repo header */
+      .repo-header {
+        background: #161b22;
+        border-bottom: 1px solid #30363d;
+        padding: 14px 20px 0;
+      }
+      .repo-breadcrumb {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 14px;
+        margin-bottom: 10px;
+        font-family: -apple-system, "Segoe UI", sans-serif;
+      }
+      .repo-owner {
+        color: #58a6ff;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .repo-slash {
+        color: #656d76;
+      }
+      .repo-name {
+        color: #58a6ff;
+        font-weight: 700;
+        font-size: 16px;
+        cursor: pointer;
+      }
+      .repo-public-badge {
+        font-size: 10px;
+        color: #8b949e;
+        border: 1px solid #30363d;
+        padding: 1px 7px;
+        border-radius: 20px;
+        font-family: -apple-system, sans-serif;
+      }
+      .repo-tabs {
+        display: flex;
+        gap: 0;
+        margin-top: 4px;
+      }
+      .repo-tab {
+        font-size: 13px;
+        color: #8b949e;
+        padding: 8px 14px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        border-bottom: 2px solid transparent;
+        font-family: -apple-system, "Segoe UI", sans-serif;
+      }
+      .repo-tab.active {
+        color: #e6edf3;
+        border-bottom-color: #f78166;
+      }
+      .repo-tab-count {
+        font-size: 11px;
+        background: #30363d;
+        padding: 0 6px;
+        border-radius: 20px;
+        color: #8b949e;
+      }
+
+      /* Branch bar */
+      .branch-bar {
+        background: #0d1117;
+        padding: 10px 20px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        border-bottom: 1px solid #21262d;
+        font-family: -apple-system, "Segoe UI", sans-serif;
+      }
+      .branch-btn {
+        font-size: 12px;
+        color: #c9d1d9;
+        background: #21262d;
+        border: 1px solid #30363d;
+        border-radius: 6px;
+        padding: 4px 10px;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        cursor: pointer;
+      }
+      .branch-name {
+        font-weight: 600;
+      }
+      .branch-meta {
+        font-size: 11px;
+        color: #656d76;
+        margin-left: auto;
+      }
+      .green-btn {
+        font-size: 12px;
+        font-weight: 600;
+        background: #238636;
+        color: #fff;
+        border: 1px solid #2ea043;
+        border-radius: 6px;
+        padding: 5px 14px;
+        cursor: pointer;
+        font-family: -apple-system, sans-serif;
+      }
+
+      /* File listing */
+      .file-listing {
+        background: #0d1117;
+        border: 1px solid #30363d;
+        border-radius: 6px;
+        margin: 12px 20px;
+        overflow: hidden;
+        font-family: -apple-system, "Segoe UI", sans-serif;
+      }
+      .file-list-header {
+        background: #161b22;
+        padding: 8px 14px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        border-bottom: 1px solid #21262d;
+        font-size: 12px;
+        color: #8b949e;
+      }
+      .fl-avatar {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: #2ea043;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 9px;
+      }
+      .fl-commit-msg {
+        color: #c9d1d9;
+        font-size: 13px;
+        font-weight: 500;
+      }
+      .fl-time {
+        margin-left: auto;
+        color: #656d76;
+        font-size: 12px;
+      }
+      .file-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 6px 14px;
+        border-bottom: 1px solid #21262d;
+        font-size: 13px;
+        cursor: pointer;
+        transition: background 0.15s;
+        position: relative;
+      }
+      .file-row:last-child {
+        border-bottom: none;
+      }
+      .file-row:hover {
+        background: rgba(255, 255, 255, 0.04);
+      }
+      .file-row.setup-row:hover {
+        background: rgba(88, 166, 255, 0.06);
+      }
+      .file-row.setup-row.highlighted {
+        background: rgba(88, 166, 255, 0.1);
+        border-left: 2px solid #58a6ff;
+        padding-left: 12px;
+      }
+      .file-icon {
+        font-size: 14px;
+        flex-shrink: 0;
+      }
+      .file-icon.dir {
+        color: #79c0ff;
+      }
+      .file-icon.file {
+        color: #8b949e;
+      }
+      .file-icon.setup-file {
+        color: #58a6ff;
+      }
+      .file-name {
+        color: #58a6ff;
+        font-size: 13px;
+        flex-shrink: 0;
+        width: 180px;
+      }
+      .file-name.setup-name {
+        color: #58a6ff;
+        font-weight: 600;
+      }
+      .file-msg {
+        color: #8b949e;
+        font-size: 12px;
+        flex: 1;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+      }
+      .file-age {
+        color: #656d76;
+        font-size: 12px;
+        flex-shrink: 0;
+        margin-left: 10px;
+      }
+
+      /* README section */
+      .readme-section {
+        margin: 0 20px 20px;
+        border: 1px solid #30363d;
+        border-radius: 6px;
+        overflow: hidden;
+      }
+      .readme-header {
+        background: #161b22;
+        padding: 8px 14px;
+        border-bottom: 1px solid #30363d;
+        font-size: 13px;
+        color: #8b949e;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-family: -apple-system, "Segoe UI", sans-serif;
+      }
+      .readme-body {
+        background: #0d1117;
+        padding: 20px 24px;
+        font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+        color: #c9d1d9;
+        font-size: 14px;
+        line-height: 1.6;
+      }
+      .readme-h1 {
+        font-size: 24px;
+        font-weight: 700;
+        color: #e6edf3;
+        border-bottom: 1px solid #21262d;
+        padding-bottom: 10px;
+        margin-bottom: 10px;
+        line-height: 1.3;
+      }
+      .readme-p {
+        color: #8b949e;
+        font-size: 13px;
+        margin-bottom: 14px;
+      }
+      .readme-link {
+        color: #58a6ff;
+        text-decoration: none;
+      }
+      .readme-h2 {
+        font-size: 18px;
+        font-weight: 700;
+        color: #e6edf3;
+        border-bottom: 1px solid #21262d;
+        padding-bottom: 6px;
+        margin: 20px 0 10px;
+      }
+      .readme-ul {
+        padding-left: 20px;
+        margin-bottom: 12px;
+        color: #c9d1d9;
+        font-size: 13px;
+      }
+      .readme-ul li {
+        margin-bottom: 3px;
+      }
+      .readme-code-inline {
+        font-family: "SFMono-Regular", Consolas, monospace;
+        font-size: 12px;
+        background: rgba(110, 118, 129, 0.15);
+        padding: 2px 6px;
+        border-radius: 4px;
+        color: #e6edf3;
+      }
+
+      /* Quick Setup section */
+      .quick-setup-box {
+        background: #161b22;
+        border: 1px solid #30363d;
+        border-radius: 6px;
+        padding: 14px 16px;
+        margin: 12px 0;
+      }
+      .qs-step {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        margin-bottom: 10px;
+        padding: 8px 10px;
+        border-radius: 6px;
+        font-size: 13px;
+        transition:
+          background 0.3s,
+          border 0.3s;
+      }
+      .qs-step:last-child {
+        margin-bottom: 0;
+      }
+      .qs-num {
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        background: #21262d;
+        border: 1px solid #30363d;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 11px;
+        font-weight: 700;
+        color: #8b949e;
+        flex-shrink: 0;
+      }
+      .qs-step.highlighted {
+        background: rgba(88, 166, 255, 0.1);
+        border: 1px solid rgba(88, 166, 255, 0.3);
+      }
+      .qs-step.highlighted .qs-num {
+        background: rgba(88, 166, 255, 0.2);
+        border-color: #58a6ff;
+        color: #58a6ff;
+      }
+      .qs-text {
+        color: #c9d1d9;
+        line-height: 1.5;
+      }
+      .qs-text .qs-link {
+        color: #58a6ff;
+        font-weight: 600;
+        text-decoration: underline;
+        cursor: pointer;
+        padding: 1px 3px;
+        border-radius: 3px;
+        transition: background 0.2s;
+      }
+      .qs-text .qs-link.active-link {
+        background: rgba(88, 166, 255, 0.2);
+        box-shadow: 0 0 10px rgba(88, 166, 255, 0.4);
+      }
+      .qs-note {
+        font-size: 12px;
+        color: #656d76;
+        margin-top: 10px;
+        padding-top: 10px;
+        border-top: 1px solid #21262d;
+        font-style: italic;
+      }
+
+      /* Cost table */
+      .cost-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 10px 0;
+        font-size: 12px;
+      }
+      .cost-table th {
+        background: #161b22;
+        color: #8b949e;
+        font-weight: 600;
+        padding: 6px 12px;
+        text-align: left;
+        border: 1px solid #30363d;
+      }
+      .cost-table td {
+        padding: 5px 12px;
+        border: 1px solid #21262d;
+        color: #c9d1d9;
+      }
+      .cost-table td.cost-val {
+        color: #3fb950;
+        font-weight: 600;
+      }
+
+      /* Blinking cursor */
+      .tcursor {
+        display: inline-block;
+        width: 7px;
+        height: 13px;
+        background: rgba(255, 255, 255, 0.7);
+        vertical-align: text-bottom;
+        animation: blink 1s step-end infinite;
+      }
+      @keyframes blink {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- CURSOR OVERLAY -->
+    <div id="cursor"></div>
+
+    <div class="window">
+      <!-- ════════════════════════════════════════
+           PHASE 1: YouTube description
+      ════════════════════════════════════════ -->
+      <div class="phase" id="yt-phase">
+        <div class="yt-titlebar">
+          <div class="dot r"></div>
+          <div class="dot y"></div>
+          <div class="dot g"></div>
+          <div class="yt-titlebar-label">youtube.com — video description</div>
+        </div>
+        <div class="yt-body">
+          <!-- Video card -->
+          <div class="yt-video-card" id="yt-card">
+            <div class="yt-thumb">
+              🌾
+              <div class="yt-thumb-duration">28:14</div>
+            </div>
+            <div class="yt-video-meta">
+              <div class="yt-video-title">
+                Making $500–$100k Automating Airdrops with Claude Code (Full
+                Tutorial)
+              </div>
+              <div class="yt-channel-name">
+                Lewis Jackson • Jackson Video Resources
+              </div>
+              <div class="yt-video-stats">
+                142K views &nbsp;·&nbsp; 2 days ago
+              </div>
+            </div>
+          </div>
+
+          <!-- Description box -->
+          <div class="yt-desc-card" id="yt-desc">
+            <div class="yt-desc-stats">
+              142,381 views <span>&nbsp;·&nbsp;</span> Apr 1, 2026
+            </div>
+
+            <!-- Link row — top of description -->
+            <div class="yt-link-row" id="yt-link">
+              <div class="yt-setup-badge">10 MIN SETUP</div>
+              <div class="yt-gh-link">
+                📌&nbsp;
+                github.com/jackson-video-resources/jackson-airdrop-farmer
+              </div>
+            </div>
+
+            <div class="yt-desc-line" id="yt-line1">
+              This is the exact repo I use to farm airdrops across 10 wallets, 3
+              chains, completely hands-free.
+            </div>
+            <div class="yt-desc-line" id="yt-line2">
+              Clone it, run
+              <code style="color: #58a6ff; font-size: 12px">claude</code>, paste
+              the SETUP.md file — done in under 10 minutes.
+            </div>
+            <div class="yt-desc-line" id="yt-line3" style="color: #717171">
+              Open source. Use it. Build on it. Sell it. Do whatever you want
+              with it.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ════════════════════════════════════════
+           PHASE 2: GitHub browser
+      ════════════════════════════════════════ -->
+      <div class="phase" id="gh-phase">
+        <!-- Browser chrome -->
+        <div class="browser-bar">
+          <div class="b-dots">
+            <div class="b-dot r"></div>
+            <div class="b-dot y"></div>
+            <div class="b-dot g"></div>
+          </div>
+          <div class="b-nav-btns">
+            <div class="b-nav-btn">←</div>
+            <div class="b-nav-btn">→</div>
+          </div>
+          <div class="url-bar">
+            <span class="url-lock">🔒</span>
+            <span class="url-dim">github.com/</span
+            ><span class="url-text">jackson-video-resources</span
+            ><span class="url-dim">/</span
+            ><span class="url-text">jackson-airdrop-farmer</span>
+          </div>
+        </div>
+
+        <!-- Scrollable GitHub content -->
+        <div class="gh-viewport">
+          <div id="gh-scroll">
+            <!-- GitHub navbar -->
+            <div class="gh-nav">
+              <div class="gh-logo">⬛</div>
+              <div class="gh-nav-link">Pull requests</div>
+              <div class="gh-nav-link">Issues</div>
+              <div class="gh-nav-link">Marketplace</div>
+              <div class="gh-nav-link">Explore</div>
+              <div class="gh-nav-right">
+                <div class="gh-avatar">LJ</div>
+              </div>
+            </div>
+
+            <!-- Repo header -->
+            <div class="repo-header">
+              <div class="repo-breadcrumb">
+                <span class="repo-owner">jackson-video-resources</span>
+                <span class="repo-slash">/</span>
+                <span class="repo-name">jackson-airdrop-farmer</span>
+                <span class="repo-public-badge">Public</span>
+              </div>
+              <div class="repo-tabs">
+                <div class="repo-tab active">&lt;&gt; Code</div>
+                <div class="repo-tab">
+                  Issues <span class="repo-tab-count">0</span>
+                </div>
+                <div class="repo-tab">
+                  Pull requests <span class="repo-tab-count">0</span>
+                </div>
+                <div class="repo-tab">Actions</div>
+                <div class="repo-tab">Settings</div>
+              </div>
+            </div>
+
+            <!-- Branch bar -->
+            <div class="branch-bar">
+              <div class="branch-btn">
+                ⎇ <span class="branch-name">main</span> ▾
+              </div>
+              <div
+                style="
+                  font-size: 12px;
+                  color: #656d76;
+                  font-family: -apple-system, sans-serif;
+                "
+              >
+                1 branch &nbsp;·&nbsp; 0 tags
+              </div>
+              <div
+                style="
+                  margin-left: auto;
+                  display: flex;
+                  gap: 8px;
+                  align-items: center;
+                "
+              >
+                <div class="branch-btn">Go to file</div>
+                <div class="green-btn">◁ Code ▾</div>
+              </div>
+            </div>
+
+            <!-- File listing -->
+            <div class="file-listing">
+              <div class="file-list-header">
+                <div class="fl-avatar">LJ</div>
+                <span class="fl-commit-msg"
+                  >Add activity diversity explainer, Claude Code referral CTAs,
+                  SETUP</span
+                >
+                <span class="fl-time"
+                  >2 hours ago &nbsp;·&nbsp; 28 commits</span
+                >
+              </div>
+              <div class="file-row">
+                <span class="file-icon dir">📁</span>
+                <span class="file-name" style="color: #58a6ff">docs</span>
+                <span class="file-msg"
+                  >Automated airdrop explainer, Claude Code referral
+                  CTAs...</span
+                >
+                <span class="file-age">2 hours ago</span>
+              </div>
+              <div class="file-row">
+                <span class="file-icon dir">📁</span>
+                <span class="file-name" style="color: #58a6ff">scripts</span>
+                <span class="file-msg"
+                  >Referred to jackson Airdrop Farm + security hardening</span
+                >
+                <span class="file-age">2 hours ago</span>
+              </div>
+              <div class="file-row">
+                <span class="file-icon dir">📁</span>
+                <span class="file-name" style="color: #58a6ff">src</span>
+                <span class="file-msg"
+                  >Referred to jackson Airdrop Farm + security hardening</span
+                >
+                <span class="file-age">2 hours ago</span>
+              </div>
+              <div class="file-row">
+                <span class="file-icon file">📄</span>
+                <span class="file-name">.env.example</span>
+                <span class="file-msg"
+                  >Referred to jackson Airdrop Farm + security hardening</span
+                >
+                <span class="file-age">2 hours ago</span>
+              </div>
+              <div class="file-row">
+                <span class="file-icon file">📄</span>
+                <span class="file-name">CLAUDE.md</span>
+                <span class="file-msg"
+                  >Referred to jackson Airdrop Farm + security hardening</span
+                >
+                <span class="file-age">2 hours ago</span>
+              </div>
+              <div class="file-row">
+                <span class="file-icon file">📄</span>
+                <span class="file-name">README.md</span>
+                <span class="file-msg"
+                  >Add activity diversity explainer, Claude Code setup
+                  CTAs</span
+                >
+                <span class="file-age">2 hours ago</span>
+              </div>
+              <!-- SETUP.md — KEY ROW -->
+              <div class="file-row setup-row" id="setup-row">
+                <span class="file-icon setup-file">📄</span>
+                <span class="file-name setup-name">SETUP.md</span>
+                <span class="file-msg"
+                  >Add SETUP.md — one-shot Claude Code setup script...</span
+                >
+                <span class="file-age">2 hours ago</span>
+              </div>
+              <div class="file-row">
+                <span class="file-icon file">📄</span>
+                <span class="file-name">package.json</span>
+                <span class="file-msg"
+                  >Add activity diversity explainer, Claude Code setup
+                  CTAs</span
+                >
+                <span class="file-age">2 hours ago</span>
+              </div>
+              <div class="file-row">
+                <span class="file-icon file">📄</span>
+                <span class="file-name">tsconfig.json</span>
+                <span class="file-msg">Initial commit</span>
+                <span class="file-age">2 days ago</span>
+              </div>
+            </div>
+
+            <!-- README anchor -->
+            <div
+              style="
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                padding: 0 20px 0;
+                font-size: 13px;
+                color: #8b949e;
+                font-family: -apple-system, sans-serif;
+              "
+            >
+              📋 README.md
+            </div>
+
+            <!-- README body -->
+            <div class="readme-section">
+              <div class="readme-body">
+                <div class="readme-h1">🌾 Jackson Airdrop Farm</div>
+                <p class="readme-p">
+                  Automated on-chain farming across MegaETH, Abstract, and
+                  Unichain — the 3 chains most likely to airdrop in 2025/26.<br />
+                  Built by <a class="readme-link">Lewis Jackson</a> |
+                  <a class="readme-link">Full Tutorial Video →</a>
+                </p>
+
+                <div class="readme-h2">What It Does</div>
+                <p style="font-size: 13px; color: #8b949e; margin-bottom: 6px">
+                  Runs 10 wallets 3× per day automatically:
+                </p>
+                <ul class="readme-ul">
+                  <li>Wrap/Unwrap ETH</li>
+                  <li>Swap ETH ↔ USDC (Uniswap V3)</li>
+                  <li>Deploy smart contracts</li>
+                  <li>Cross-chain bridging (via Relay)</li>
+                </ul>
+
+                <div class="readme-h2">Expected Setup Cost</div>
+                <table class="cost-table">
+                  <thead>
+                    <tr>
+                      <th>Item</th>
+                      <th>Cost</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>ETH to fund wallets</td>
+                      <td class="cost-val">0.06–0.8 ETH ($150–$300)</td>
+                    </tr>
+                    <tr>
+                      <td>Railway hosting (optional)</td>
+                      <td class="cost-val">~$5/month</td>
+                    </tr>
+                    <tr>
+                      <td>Claude Code subscription</td>
+                      <td class="cost-val">$20/month (or API credits)</td>
+                    </tr>
+                    <tr>
+                      <td>Gas fees per day</td>
+                      <td class="cost-val">~$1–3</td>
+                    </tr>
+                  </tbody>
+                </table>
+
+                <div class="readme-h2">
+                  ⚡ Quick Setup (One-Shot via Claude Code)
+                </div>
+                <p style="font-size: 13px; color: #8b949e; margin-bottom: 10px">
+                  Claude handles everything — prerequisites, wallets, funding,
+                  deployment.
+                </p>
+
+                <div class="quick-setup-box">
+                  <div class="qs-step" id="qs1">
+                    <div class="qs-num">1</div>
+                    <div class="qs-text">
+                      Open
+                      <span class="qs-link" id="setup-link">SETUP.md</span> on
+                      GitHub
+                    </div>
+                  </div>
+                  <div class="qs-step" id="qs2">
+                    <div class="qs-num">2</div>
+                    <div class="qs-text">
+                      Click the
+                      <span class="readme-code-inline">copy</span> button
+                      (top-right of the code block)
+                    </div>
+                  </div>
+                  <div class="qs-step" id="qs3">
+                    <div class="qs-num">3</div>
+                    <div class="qs-text">
+                      Open your terminal and run:
+                      <span class="readme-code-inline">claude</span>
+                    </div>
+                  </div>
+                  <div class="qs-step" id="qs4">
+                    <div class="qs-num">4</div>
+                    <div class="qs-text">
+                      Paste and press Enter<span class="tcursor"></span>
+                    </div>
+                  </div>
+                  <div class="qs-note">
+                    Claude handles the rest — prerequisites, wallets, funding,
+                    deployment. ~10–20 minutes.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- /gh-scroll -->
+        </div>
+        <!-- /gh-viewport -->
+      </div>
+      <!-- /gh-phase -->
+    </div>
+    <!-- /window -->
+
+    <script>
+      // ── Cursor ─────────────────────────────────────────────────────────
+      const cur = document.getElementById("cursor");
+      let cx = 960,
+        cy = 540;
+      cur.style.left = cx + "px";
+      cur.style.top = cy + "px";
+
+      function moveTo(x, y, ms, cb) {
+        const sx = cx,
+          sy = cy;
+        const t0 = performance.now();
+        (function step(now) {
+          let p = Math.min((now - t0) / ms, 1);
+          p = p < 0.5 ? 2 * p * p : -1 + (4 - 2 * p) * p;
+          cx = sx + (x - sx) * p;
+          cy = sy + (y - sy) * p;
+          cur.style.left = cx + "px";
+          cur.style.top = cy + "px";
+          if (p < 1) requestAnimationFrame(step);
+          else {
+            cx = x;
+            cy = y;
+            if (cb) cb();
+          }
+        })(t0);
+      }
+
+      function click(cb) {
+        cur.classList.add("clicking");
+        setTimeout(() => {
+          cur.classList.remove("clicking");
+          if (cb) cb();
+        }, 130);
+      }
+
+      function at(ms, fn) {
+        setTimeout(fn, ms);
+      }
+
+      // ─────────────────────────────────────────────────────────────────
+      // TIMING  (00:18:10:20 → 00:18:33:17 ≈ 22.8s)
+      //
+      // t=0    — YT description phase
+      // t=0.3  — video card fades in
+      // t=1.2  — description card fades in
+      // t=2.0  — GitHub link row appears
+      // t=2.8  — link row glows (user hears "link will take you over")
+      // t=3.6  — crossfade → GitHub browser
+      // t=4.0  — GitHub page visible, cursor appears
+      // t=5.0  — cursor moves toward SETUP.md row in file listing
+      // t=6.2  — SETUP.md row highlights
+      // t=7.0  — cursor clicks SETUP.md
+      // t=8.0  — slow scroll begins (down to Quick Setup)
+      // t=13.5 — scroll stops at Quick Setup section
+      // t=14.2 — step 1 (SETUP.md) row highlights
+      // t=15.5 — cursor moves to SETUP.md link in step 1
+      // t=16.8 — cursor clicks, SETUP.md link glows
+      // t=22.8 — end
+      // ─────────────────────────────────────────────────────────────────
+
+      // t=0: YT phase
+      at(80, () => document.getElementById("yt-phase").classList.add("active"));
+
+      // t=0.3: video card
+      at(300, () => document.getElementById("yt-card").classList.add("show"));
+
+      // t=1.2: desc card
+      at(1200, () => document.getElementById("yt-desc").classList.add("show"));
+
+      // t=1.8: desc lines
+      at(1800, () => document.getElementById("yt-line1").classList.add("show"));
+      at(2200, () => document.getElementById("yt-line2").classList.add("show"));
+      at(2600, () => document.getElementById("yt-line3").classList.add("show"));
+
+      // t=2.0: link row
+      at(2000, () => document.getElementById("yt-link").classList.add("show"));
+
+      // t=2.8: glow
+      at(2800, () => document.getElementById("yt-link").classList.add("glow"));
+
+      // t=3.6: crossfade to GitHub
+      at(3600, () => {
+        document.getElementById("yt-phase").classList.remove("active");
+        setTimeout(() => {
+          document.getElementById("gh-phase").classList.add("active");
+        }, 300);
+      });
+
+      // t=4.0: cursor appears (offset from window center)
+      // Window: 860px wide, centered at x=960. Left edge at x=530.
+      // Window height ~600px, centered at y=540. Top at ~240.
+      // Browser bar: y=240..284  Content: y=284..820
+      // GitHub nav: y=284..332  Repo header: y=332..412
+      // Branch bar: y=412..448  File list header: y=448..484
+      // File rows (35px each):
+      //   docs:      y=484..519   scripts: y=519..554   src: y=554..589
+      //   .env:      y=589..624   CLAUDE:  y=624..659   README: y=659..694
+      //   SETUP.md:  y=694..729   center ≈ y=711
+      // File listing x: left=530+20=550, right=550+820=~1370
+      // SETUP.md filename center ≈ x=530+20+14+12+90 = 666
+
+      at(4000, () => {
+        cx = 750;
+        cy = 400;
+        cur.style.left = cx + "px";
+        cur.style.top = cy + "px";
+        cur.classList.add("visible");
+      });
+
+      // t=5.0: cursor moves toward SETUP.md
+      at(5000, () => moveTo(668, 711, 700));
+
+      // t=5.8: SETUP.md row starts to highlight (hover)
+      at(5800, () => {
+        document.getElementById("setup-row").classList.add("highlighted");
+      });
+
+      // t=7.0: click SETUP.md file
+      at(7000, () => {
+        click();
+      });
+
+      // t=8.0: scroll begins — move down ~480px over 5.5s
+      at(8000, () => {
+        const scrollEl = document.getElementById("gh-scroll");
+        scrollEl.style.transition =
+          "transform 5.5s cubic-bezier(0.4, 0, 0.2, 1)";
+        scrollEl.style.transform = "translateY(-490px)";
+        // move cursor away while scrolling
+        moveTo(800, 500, 600);
+      });
+
+      // t=13.5: scroll lands, highlight Quick Setup step 1
+      at(13500, () => {
+        document.getElementById("qs1").classList.add("highlighted");
+      });
+
+      // t=14.2: cursor moves to SETUP.md link in Quick Setup
+      // After scrolling -490px, the readme section is now visible.
+      // Quick Setup box is approx at:
+      //   readme starts at ~448+9*35+12+14 = 448+315+26 = 789px from content top
+      //   After scroll -490px: effective position = 789-490 = 299px from content top
+      //   Absolute y = 284 + 299 = 583
+      //   SETUP.md link (step 1) is ~16px into the box: y ≈ 583 + 35 = 618
+      //   x: left=530+20+24+16+12+22+12 = 636 (approx for the link text)
+      at(14200, () => moveTo(680, 618, 600));
+
+      // t=15.5: hover over SETUP.md link
+      at(15500, () => {
+        moveTo(672, 622, 300);
+      });
+
+      // t=16.8: click
+      at(16800, () => {
+        click();
+        setTimeout(() => {
+          document.getElementById("setup-link").classList.add("active-link");
+        }, 100);
+      });
+
+      // t=17.5: rest of steps highlight in sequence
+      at(17500, () =>
+        document.getElementById("qs2").classList.add("highlighted"),
+      );
+      at(18500, () =>
+        document.getElementById("qs3").classList.add("highlighted"),
+      );
+      at(19500, () =>
+        document.getElementById("qs4").classList.add("highlighted"),
+      );
+
+      // t=20.5: cursor drifts to step 3 (run claude)
+      at(20500, () => moveTo(700, 660, 800));
+    </script>
+  </body>
+</html>

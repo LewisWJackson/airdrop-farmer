@@ -17,7 +17,7 @@ Imagine you signed up for a new app. Used it a few times over a few months. Then
 
 That's what crypto airdrops are. It's happened multiple times with real payouts in the thousands per person. The people who knew about it in advance and set up ten accounts instead of one walked away with twenty to forty thousand dollars. For just using an app.
 
-Here's the thing. The people who are really good at this — the ones who live in crypto, who've spent years learning how airdrops work, who do this manually across multiple wallets — they still can't do what this system does. They can't manage ten wallets with consistent, randomised, human-looking activity across nine different platforms simultaneously. It's not possible to do manually. This system does it automatically, around the clock, without you touching anything.
+Here's the thing. The people who are really good at this — the ones who live in crypto, who've spent years learning how airdrops work, who do this manually across multiple wallets — they still can't do what this system does. They can't manage ten wallets with consistent, varied, organic on-chain activity across nine different platforms simultaneously. It's not possible to do manually. This system does it automatically, around the clock, without you touching anything.
 
 This video hands that to someone who's never heard the word airdrop. For free. In about ten minutes.
 
@@ -140,13 +140,13 @@ Most tutorials drop you straight into setup commands without explaining what you
 
 **TENSION:**
 
-The naive approach to airdrop farming is one wallet, doing the same transaction on a schedule. Same amount every time. Same action. Same timing. That looks exactly like what it is — a bot. Chains have what's called Sybil resistance — an anti-bot detection layer that looks for wallets behaving identically. Ten wallets funded from the same source, created at the same time, doing the same transactions at the same intervals — that pattern gets flagged and excluded. It has happened with real airdrops. Wallets excluded after the snapshot. Nothing to show for months of activity.
+The naive approach to airdrop farming is one wallet, doing the same transaction on a schedule. Same amount every time. Same action. Same timing. That pattern gets penalised or excluded — chains score wallets on the quality and diversity of their activity. Wallets that do one thing, once, in a burst get minimal allocation. Wallets that show genuine, sustained engagement across multiple protocols over months get the top tiers. It has happened with real airdrops. Wallets with poor activity profiles ended up excluded after the snapshot. Nothing to show for months of activity.
 
 **PAYOFF:**
 
-This system is built around avoiding that at every level.
+This system is designed to build exactly the kind of diverse, organic transaction history that chains reward.
 
-Ten wallets. Each one has what I'd call a personality — different active hours, different transaction amounts, different delays between actions. The goal is for each wallet to look like a different human with different habits. They're not doing the same thing at the same time. They're doing different things at different times in different amounts.
+Ten wallets. Each one has what I'd call a personality — different active hours, different transaction amounts, different delays between actions. Each wallet builds an independent activity history across multiple protocols. They're not doing the same thing at the same time. They're doing different things at different times in different amounts.
 
 *[ON SCREEN: Show Telegram notification format.]*
 
@@ -160,7 +160,7 @@ Every transaction is validated by a security module before it goes on-chain. I'l
 
 *[RE-HOOK — ~18 min. Lewis back to camera.]*
 
-Ten wallets with individual personalities. Nine chains. Three times a day. Randomised activity designed to look human at a scale no human could actually manage manually. That's the system.
+Ten wallets with individual personalities. Nine chains. Three times a day. Diverse, organic activity across multiple protocols at a scale no human could manage manually. That's the system.
 
 Now let's build it. And I'm going to show you a way to get all of this set up and running in about five minutes.
 
