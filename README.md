@@ -46,14 +46,13 @@ Any Ubuntu 22.04+ VPS works. DigitalOcean $6/month droplet is sufficient.
 
 ---
 
-## Quick Setup (One-Shot via Claude Code)
+## Guided Setup (Claude Code)
 
 1. Open **[SETUP.md](SETUP.md)** on GitHub
-2. Click the **copy button** (top-right corner of the code block)
-3. Open your terminal and run: `claude`
-4. Paste and press Enter
+2. Copy the prompt inside the code block
+3. Open your terminal, run `claude`, then paste the prompt
 
-Claude Code handles the rest — prerequisites, wallets, funding, deployment. ~10–20 minutes.
+Claude Code walks you through each step interactively — prerequisites, wallets, funding, deployment. ~10–20 minutes. You confirm at each stage before anything moves funds.
 
 ---
 
@@ -190,6 +189,10 @@ Airdrop farming involves real cryptocurrency. You could lose the ETH you put in 
 ## Contributing
 
 PRs welcome. If you add support for a new chain, open an issue first with the rationale.
+
+## Support the Project
+
+If this saved you time, a GitHub star helps other people find it. No pressure.
 
 ## License
 

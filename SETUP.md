@@ -1,111 +1,75 @@
-# One-Shot Setup Prompt
+# Claude Code Setup Guide
+
+This guide uses Claude Code as an interactive setup assistant. Claude will run each step, check for errors, and ask you to confirm before proceeding. You stay in control throughout.
 
 **How to use:**
-1. Click the **copy button** (top-right corner of the box below)
-2. Open your terminal and run: `claude` (or `claude --dangerously-skip-permissions` to skip confirmations)
-3. Paste and press Enter
-
-Claude Code will set up the entire farm automatically — 10–20 minutes, no manual steps.
+1. Open your terminal and run: `claude`
+2. Copy the prompt below and paste it in
+3. Claude will walk you through each step, pausing for your input at key points
 
 ---
 
-~~~~
-Hello Claude Code. I need your help setting up the Jackson Airdrop Farm. This is a 10-wallet automated airdrop farming system that runs 3x per day across MegaETH, Abstract, and Unichain — the three chains most likely to airdrop tokens in 2025/26.
+```
+I want to set up the Jackson Airdrop Farm — an open-source, multi-wallet on-chain activity system for MegaETH, Abstract, and Unichain. The source code is at https://github.com/jackson-video-resources/Jackson-airdrop-farmer and I want to run it on my own machine or Railway account.
 
-Please follow these steps in order, carefully. If any step fails, diagnose the error and fix it before continuing — do not skip steps. Show me clear progress updates after each step completes.
+Please follow these steps in order. Check for errors at each step and fix them before continuing. Give me a clear status update after each step completes.
 
 ---
 
 ## STEP 1 — Check Prerequisites
 
-Please check whether the following tools are installed and at the correct versions. Run each check and report the result clearly.
+Check whether the following tools are installed at the correct versions.
 
-**Check 1: Node.js**
+**Node.js**
 Run: `node --version`
+- Version 20 or higher: continue
+- Below 20 or missing:
+  - Mac: `brew install node` (if Homebrew missing: install from brew.sh first)
+  - Linux/WSL: `curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash - && sudo apt-get install -y nodejs`
+  - Windows: download Node.js 20 LTS from nodejs.org, then re-open terminal
+  - Ask me to confirm Node is updated before continuing
 
-- If Node.js is version 20 or higher: good, continue.
-- If Node.js is below version 20 or missing:
-  - Mac: Tell me to run `brew install node` (and if Homebrew isn't installed: `curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh | bash`)
-  - Linux/WSL: Tell me to run `curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash - && sudo apt-get install -y nodejs`
-  - Windows (without WSL): Tell me to download Node.js 20 LTS from nodejs.org, then re-open this terminal and paste this prompt again.
-  - Wait for me to confirm Node is updated before continuing.
-
-**Check 2: Git**
+**Git**
 Run: `git --version`
+- Missing on Mac: `brew install git`
+- Missing on Linux/WSL: `sudo apt-get install -y git`
 
-- If Git is missing:
-  - Mac: `brew install git`
-  - Linux/WSL: `sudo apt-get install -y git`
-  - Windows: Tell me to download Git for Windows from git-scm.com.
-  - Wait for confirmation before continuing.
-
-**Check 3: Railway CLI**
+**Railway CLI**
 Run: `railway --version`
+- Missing: `npm install -g @railway/cli`
 
-- If Railway CLI is missing: run `npm install -g @railway/cli`
-- If that fails with a permissions error on Mac/Linux: run `sudo npm install -g @railway/cli`
-- Confirm it's installed before continuing.
-
-Once all three checks pass, print:
-
-```
-✅ Prerequisites verified:
-   Node.js: [version]
-   Git: [version]
-   Railway CLI: [version]
-
-   Ready to set up Jackson Airdrop Farm.
-```
+Print a summary of all three versions once confirmed.
 
 ---
 
 ## STEP 2 — Clone the Repository
-
-Run:
 
 ```bash
 git clone https://github.com/jackson-video-resources/Jackson-airdrop-farmer.git jackson-airdrop-farm
 cd jackson-airdrop-farm
 ```
 
-If the clone fails (network error, repository not found), tell me clearly what the error is.
-
-Once complete, print:
-
-```
-✅ Repository cloned to: jackson-airdrop-farm/
-```
+If the clone fails, report the exact error.
 
 ---
 
 ## STEP 3 — Install Dependencies
 
-Run:
-
 ```bash
 npm install
 ```
 
-This installs ethers.js, TypeScript, and all other dependencies. It should take 30–60 seconds.
+This installs ethers.js, TypeScript, and all other dependencies (~30–60 seconds).
 
-If it fails:
-- Check for Node.js version issues first (`node --version` — must be 20+)
-- If there's a permission error: try `sudo npm install`
-- If there's a network error: try `npm install --registry https://registry.npmjs.org`
-
-Once complete, print:
-
-```
-✅ Dependencies installed successfully.
-```
+If it fails due to a Node.js version issue, check `node --version` again (must be 20+).
 
 ---
 
-## STEP 4 — Generate Encryption Key & Configure Environment
+## STEP 4 — Generate Encryption Key and Configure Environment
 
-Before generating wallets, we need an encryption key. This encrypts your wallet private keys at rest — it never leaves your machine.
+The encryption key protects wallet private keys at rest on disk. It stays on your machine and is never sent anywhere.
 
-Run this to generate a secure random key AND create the .env file in one step:
+Run this to generate a secure random key and create the .env file:
 
 ```bash
 ENCKEY=$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))") && cat > .env << ENVEOF
@@ -115,178 +79,120 @@ TELEGRAM_CHAT_ID=
 ENVEOF
 ```
 
-Verify the .env file looks correct (key should be 64 hex characters):
+Verify the .env was created correctly (key should be 64 hex characters):
 
 ```bash
 head -2 .env
-```
-
-Once complete, print:
-
-```
-✅ Encryption key generated and saved to .env
-   (64-character hex key — never share this or commit it to Git)
 ```
 
 ---
 
 ## STEP 5 — Generate 10 Wallets
 
-Run the wallet generator:
-
 ```bash
 npx tsx src/index.ts
 ```
 
-When the interactive menu appears, select option **1 — Generate Wallet Fleet**.
+When the interactive menu appears, select option 1 — Generate Wallet Fleet.
+When asked how many wallets, enter 10 (or press Enter for the default).
 
-When asked "How many wallets?", enter **10** (or press Enter to accept the default).
+Show me all 10 wallet addresses (W00 through W09) once generated.
 
-Wait for the wallets to generate. Print the output clearly, including all 10 wallet addresses (W00 through W09).
-
-After showing the output, print this message prominently:
+Then display this message:
 
 ```
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🔐 CRITICAL: BACK UP YOUR MNEMONIC PHRASE RIGHT NOW
+MNEMONIC PHRASE — BACK THIS UP BEFORE CONTINUING
 
-The 12 words shown above are the master key to all 10
-wallets. Write them down on paper. Store them somewhere
-safe and offline. If you lose them, you lose access to
-every airdrop token these wallets earn.
+The 12-word mnemonic shown above is the master key to all 10 wallets.
+Write it down on paper and store it somewhere safe offline.
+If you lose it, you lose access to all airdrop tokens these wallets earn.
 
-DO NOT:
-  ✗ Screenshot it
-  ✗ Paste it into any website
-  ✗ Send it to anyone (including Claude)
-  ✗ Store it only in a notes app
+Recommended: write it on paper and store it with your other important documents.
+Do not screenshot it or store it in a notes app.
 
-DO:
-  ✓ Write it on paper
-  ✓ Store in a fireproof safe if you have one
-  ✓ Make a second paper copy kept elsewhere
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Once you've written it down, type YES to continue.
 ```
-
-Then ask me: **"Have you written down your mnemonic phrase and stored it safely? Type YES to continue."**
 
 Wait for my YES before proceeding.
 
 ---
 
-## STEP 6 — Display Funding Instructions
+## STEP 6 — Fund the Main Wallet
 
-Display W00's address (the first wallet, index 0) very clearly:
+Display W00's address clearly (the first wallet, index 0) and these instructions:
 
 ```
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-💰 FUND YOUR MAIN WALLET (W00)
+FUND YOUR MAIN WALLET (W00)
 
-Send ETH to this address:
+Send ETH to this address on Ethereum Mainnet:
 
-  [W00 ADDRESS HERE]
+  [W00 ADDRESS]
 
-Instructions:
-  • Amount: 0.05 ETH minimum, 0.1 ETH recommended
-  • Network: Ethereum Mainnet (NOT BSC, NOT Polygon)
-  • From: Any exchange (Coinbase, Binance, Kraken,
-    Caleb & Brown, Bybit — anything that lets you
-    withdraw ETH)
+Amount: 0.05 ETH minimum, 0.1 ETH recommended
+Network: Ethereum Mainnet (not BSC, not Polygon)
 
-Steps on most exchanges:
-  1. Go to Withdraw / Send
+From any exchange (Coinbase, Binance, Kraken, Bybit):
+  1. Withdraw / Send
   2. Select ETH
-  3. Select network: Ethereum (ERC-20)
+  3. Network: Ethereum (ERC-20)
   4. Paste the address above
   5. Amount: 0.05–0.1 ETH
-  6. Confirm and send
 
-Confirmation usually takes 3–5 minutes.
-Check: https://etherscan.io — search the address above.
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Confirmation takes 3–5 minutes.
+Verify arrival: https://etherscan.io — search the address above.
 ```
 
-Ask me: **"Have you sent ETH to W00 and has it arrived? Type YES when confirmed."**
-
+Ask me: "Has the ETH arrived in W00? Type YES when confirmed."
 Wait for my YES before proceeding.
 
 ---
 
-## STEP 7 — Bridge & Distribute ETH Across Chains
+## STEP 7 — Bridge and Distribute ETH Across Chains
 
-Now bridge from W00 on Ethereum mainnet to the farming chains, then distribute to all 10 wallets.
+Bridge from W00 on Ethereum mainnet to the farming chains, then distribute to all 10 wallets.
 
-**Step 7a — Fund all chains from W00:**
-
+**Fund all chains from W00:**
 ```bash
 npx tsx src/fund-all-chains.ts
 ```
 
-This bridges ETH from W00 to MegaETH, Abstract, and Unichain. Watch the output and report what happens. If a bridge fails or an RPC is unreachable, note it but continue with the chains that work.
-
-**Step 7b — Distribute to all wallets:**
-
+**Distribute to all wallets:**
 ```bash
 npx tsx src/distribute-wallets.ts
 ```
 
-This sends ETH from W00 to W01–W09 on each chain. Watch the transaction output and report: how many transfers were sent and how much ETH was distributed per chain.
-
-If the distribution script reports "too low balance" on a chain, that bridge may not have landed yet. Wait 2 minutes and try again.
-
-Once both steps complete, run the balance checker:
-
+**Check balances:**
 ```bash
 npx tsx src/check-all-balances.ts
 ```
 
-Report the results: which wallets have balances on which chains.
-
-Print:
-
-```
-✅ ETH distributed across farming wallets.
-   W01–W09 are funded and ready to farm.
-```
+Report: which wallets have balances on which chains. If a bridge hasn't settled yet, wait 2 minutes and check again.
 
 ---
 
 ## STEP 8 — Set Up Telegram Notifications
 
-Your farmer sends a Telegram message after every farming run. This step connects it to your phone.
-
-Print these instructions clearly:
+Your farmer sends a Telegram message after every farming run. Here's how to connect it:
 
 ```
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📱 SET UP TELEGRAM (2-MINUTE PROCESS)
+SET UP TELEGRAM (2 minutes)
 
-STEP A — Create your bot:
-  1. Open Telegram on your phone
-  2. Search for @BotFather
-  3. Send it: /newbot
-  4. Choose a name (e.g. "My Airdrop Farmer")
-  5. Choose a username (must end in "bot")
-  6. BotFather gives you a token like: 7891234567:AAHxyz...
-  7. Copy that token — that's your BOT_TOKEN
+Step A — Create your bot:
+  1. Open Telegram, search for @BotFather
+  2. Send: /newbot
+  3. Follow prompts — you get a token like: 7891234567:AAHxyz...
 
-STEP B — Get your Chat ID:
+Step B — Get your Chat ID:
   1. Search Telegram for @userinfobot
-  2. Send it: /start
-  3. It replies with your ID number (e.g. 123456789)
-  4. That's your CHAT_ID
+  2. Send: /start
+  3. It replies with your numeric ID
 
-STEP C — Tell me both values below.
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Step C — Share both values with me below.
 ```
 
-Ask me: **"Please share your Telegram BOT_TOKEN and CHAT_ID."**
+Ask me for my BOT_TOKEN and CHAT_ID. Once I provide them, update the .env file with those values.
 
-Wait for me to provide both values.
-
-Once I give them, update the .env file using sed or Python to replace the empty TELEGRAM_BOT_TOKEN= and TELEGRAM_CHAT_ID= lines with the values I provided.
-
-Then send a test message to confirm it works:
+Then send a test message:
 
 ```bash
 node -e "
@@ -298,50 +204,35 @@ fetch(\`https://api.telegram.org/bot\${token}/sendMessage\`, {
   headers: {'Content-Type': 'application/json'},
   body: JSON.stringify({
     chat_id: chatId,
-    text: '🌾 *Jackson Airdrop Farm* — Setup complete! Your farmer is ready.',
+    text: 'Jackson Airdrop Farm — setup test. If you see this, Telegram is connected.',
     parse_mode: 'Markdown'
   })
-}).then(r => r.json()).then(d => console.log(d.ok ? '✅ Telegram connected!' : '❌ Error: ' + JSON.stringify(d)));
+}).then(r => r.json()).then(d => console.log(d.ok ? 'Telegram connected.' : 'Error: ' + JSON.stringify(d)));
 "
 ```
 
-If the test message fails:
-- Is the BOT_TOKEN correct (numbers, colon, then letters)?
-- Is the CHAT_ID correct (just numbers)?
-- Did you send /start to the bot from Telegram yet?
-
 ---
 
-## STEP 9 — Deploy to Railway (Cloud Hosting)
+## STEP 9 — Deploy to Railway
 
-This makes your farmer run 24/7 in the cloud, even when your computer is off.
+Railway is a PaaS host (like Heroku) where you create your own private project. The environment variables below go into your project's encrypted variable vault — they are not shared with anyone.
 
-**Step 9a — Create a Railway account (if you don't have one):**
+**Create a Railway account (if you don't have one):**
+Tell me to visit https://railway.app and sign up. Wait for my confirmation.
 
-Tell the user: "First, create a free Railway account here: https://railway.com?referralCode=BLrK89 — come back when you've signed up."
-
-Wait for them to confirm before continuing.
-
-**Step 9b — Log in to Railway:**
-
+**Log in:**
 ```bash
 railway login
 ```
+This opens a browser window. Log in with GitHub or email.
 
-This opens a browser window. Log in with GitHub or email. Come back when done.
-
-If Railway login fails or you prefer local hosting, tell me and I'll switch to the PM2 setup instead.
-
-**Step 9b — Create a Railway project:**
-
+**Create a Railway project:**
 ```bash
 railway init
 ```
+Use project name: `jackson-airdrop-farm`
 
-When prompted for a project name, use: `jackson-airdrop-farm`
-
-**Step 9c — Set environment variables:**
-
+**Set environment variables in your Railway project:**
 ```bash
 railway variables set ENCRYPTION_KEY="$(grep ENCRYPTION_KEY .env | cut -d= -f2)"
 railway variables set TELEGRAM_BOT_TOKEN="$(grep TELEGRAM_BOT_TOKEN .env | cut -d= -f2)"
@@ -351,33 +242,20 @@ WALLET_DATA=$(base64 < data/wallets.enc.json | tr -d '\n')
 railway variables set WALLET_DATA_B64="$WALLET_DATA"
 ```
 
-**Step 9d — Deploy:**
+Note: WALLET_DATA is your AES-256-GCM encrypted wallet file (not raw private keys). The encryption key and wallet data go to your own Railway project — the same way you'd put DATABASE_URL in a .env on your own server.
 
+**Deploy:**
 ```bash
 railway up -d
 ```
 
-Watch the output. This takes 1–3 minutes.
-
-If the deployment fails, run `railway logs` and report what you see.
-
-Once deployed, print:
-
-```
-✅ Deployed to Railway successfully.
-   Your farmer will run automatically at:
-     8:00 AM UTC
-     2:00 PM UTC
-     8:00 PM UTC
-
-   Check status anytime: railway logs
-```
+If deployment fails, run `railway logs` and report what you see.
 
 ---
 
 ## STEP 9 (ALTERNATIVE) — Run Locally with PM2
 
-If Railway isn't working or you prefer your own machine:
+If you prefer your own machine:
 
 ```bash
 npm install -g pm2
@@ -386,92 +264,50 @@ pm2 startup
 pm2 save
 ```
 
-Run the command that `pm2 startup` outputs (it will start with `sudo env PATH=...`).
-
-Then verify:
+Run the command that `pm2 startup` outputs, then verify:
 ```bash
 pm2 list
 pm2 logs jackson-airdrop-farm --lines 20
 ```
 
-Print:
-
-```
-✅ PM2 running locally.
-   Farmer scheduled for: 8am, 2pm, 8pm UTC
-   Check status: pm2 list
-   View logs: pm2 logs jackson-airdrop-farm
-```
-
 ---
 
-## STEP 10 — Test Run & Final Confirmation
-
-Let's do a manual test run to confirm everything works end to end.
-
-Run:
+## STEP 10 — Test Run
 
 ```bash
 npx tsx src/scheduled-farm.ts
 ```
 
-Watch the output. It should:
-1. Load your wallets
+This runs one full farming cycle. It should:
+1. Load wallets
 2. Check balances across all chains
-3. Select wallet/chain combinations
-4. Execute tasks (wraps, swaps, deploys)
-5. Send a Telegram summary
+3. Execute tasks (wraps, swaps, deploys)
+4. Send a Telegram summary
 
-Report what happened: how many tasks ran, which chains were farmed, and whether the Telegram message arrived.
-
-If the run finds no funded wallets, the bridge/distribution in Step 7 may not have settled yet. Wait 5 minutes and try again.
+Report: how many tasks ran, which chains, and whether the Telegram message arrived.
 
 Once you've confirmed at least one successful task, print:
 
 ```
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🌾 JACKSON AIRDROP FARM IS RUNNING
+Setup complete.
 
-Your 10 wallets are now farming MegaETH, Abstract,
-and Unichain automatically, 3x per day.
+Your 10 wallets are farming MegaETH, Abstract, and Unichain 3x per day.
 
-WHAT HAPPENS NEXT:
-  • Every 8 hours, your wallets execute random on-chain
-    transactions (swaps, wraps, contract deploys)
-  • You'll get a Telegram message after each run
-  • Over the next 3–6 months, this builds the on-chain
-    history that qualifies for airdrops
+Check in:
+  Telegram: farming summaries every 8 hours
+  Balances: npx tsx src/check-all-balances.ts
+  Logs (Railway): railway logs
+  Logs (PM2): pm2 logs jackson-airdrop-farm
 
-TO CHECK IN:
-  • Telegram: watch for farming summaries
-  • Balances: npx tsx src/check-all-balances.ts
-  • Logs (Railway): railway logs
-  • Logs (PM2): pm2 logs jackson-airdrop-farm
-
-SECURITY REMINDERS:
-  ✓ Mnemonic phrase backed up offline
-  ✓ .env file NOT committed to Git
-  ✓ Farming wallets hold only farming amounts
-
-QUESTIONS OR ISSUES:
-  YouTube: https://youtube.com/@lewisjackson
-  GitHub: https://github.com/jackson-video-resources/Jackson-airdrop-farmer
-
-Good luck with the airdrops. 🚀
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Security checklist:
+  - Mnemonic backed up offline
+  - .env file not committed to Git
+  - Farming wallets hold only farming amounts
+```
 ```
 
-Finally, print this message:
+---
 
-```
-⭐ One last thing — if this saved you time, a star on
-   GitHub takes 5 seconds and helps other people find it:
+## Manual Setup
 
-   https://github.com/jackson-video-resources/Jackson-airdrop-farmer
-
-   Click ⭐ Star in the top-right corner of that page.
-   It genuinely makes a difference — thank you!
-```
-
-Setup is complete.
-~~~~
+If you prefer to run each step yourself without Claude Code, see the manual steps in [README.md](README.md).
