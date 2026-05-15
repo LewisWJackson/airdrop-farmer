@@ -21,7 +21,7 @@ Airdrops reward wallets with genuine transaction history. This farm builds that 
 | Item | Cost |
 |------|------|
 | ETH to fund wallets | ~0.05–0.1 ETH (~$150–$300) |
-| Railway hosting (optional) | ~$5/month |
+| [Hostinger VPS](https://hostinger.com/lewisjackson10) hosting (optional) | ~$5/month |
 | Claude Code subscription | $20/month (or API credits) |
 | Gas fees per day | ~$1–3 |
 
@@ -33,7 +33,7 @@ Airdrops reward wallets with genuine transaction history. This farm builds that 
 
 - **Node.js 20+** — [nodejs.org](https://nodejs.org)
 - **Claude Code** — `npm install -g @anthropic-ai/claude-code`
-- **Railway CLI** (for cloud deployment) — [railway.app/install](https://railway.app/install)
+- **A Hostinger VPS** (optional, for 24/7 cloud hosting) — [hostinger.com/lewisjackson10](https://hostinger.com/lewisjackson10)
 - **Git**
 - **0.05–0.1 ETH** on Ethereum mainnet (to fund the farm)
 - **Telegram account** (for notifications)
@@ -81,9 +81,7 @@ npx tsx src/bridge-abstract-now.ts
 npx tsx src/fund-unichain.ts
 
 # 7. Start farming
-npm run start:pm2    # Local (Mac/Linux)
-# OR
-railway up           # Cloud (Railway)
+npm run start:pm2    # Local (Mac/Linux) — or run the same on a Hostinger VPS for 24/7 (see below)
 ```
 
 ---
@@ -117,25 +115,26 @@ Buy ETH → withdraw to the W00 address shown during setup.
 
 ---
 
-## Railway Cloud Deployment
+## Hostinger VPS Deployment (24/7)
 
-Running on Railway means the farm runs 24/7 even when your computer is off.
+Running on a Hostinger VPS means the farm runs 24/7 even when your computer is off. The cheapest KVM plan (~$5/mo) is plenty: **https://hostinger.com/lewisjackson10**
 
 ```bash
-# Login
-railway login
+# SSH into your VPS (Hostinger gives you the IP + root password)
+ssh root@YOUR_VPS_IP
 
-# Create project
-railway init
+# Install Node + git, then clone and install
+apt update && apt install -y nodejs npm git
+git clone <your-repo-url> airdrop-farmer && cd airdrop-farmer
+npm install
 
-# Set environment variables
-railway variables set ENCRYPTION_KEY=your_key
-railway variables set TELEGRAM_BOT_TOKEN=your_token
-railway variables set TELEGRAM_CHAT_ID=your_id
-railway variables set WALLET_DATA=$(cat data/wallets.enc.json | base64)
+# Create the .env (ENCRYPTION_KEY, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID) and
+# copy your encrypted wallet file up from your machine:
+#   scp data/wallets.enc.json root@YOUR_VPS_IP:/root/airdrop-farmer/data/
 
-# Deploy
-railway up
+# Start it under PM2 so it stays alive and survives reboots
+npm run start:pm2
+pm2 save && pm2 startup
 ```
 
 The farm runs automatically. You'll get a Telegram message every 8 hours confirming activity.
@@ -149,7 +148,7 @@ The farm runs automatically. You'll get a Telegram message every 8 hours confirm
 - Use a **dedicated machine or VPS** — not your main computer
 - **Back up your mnemonic** (shown once during setup) — store it offline
 - Use **small amounts** until you're comfortable — the farm uses 0.0003–0.001 ETH per transaction
-- Your computer does **not** need to be on 24/7 if you use Railway
+- Your computer does **not** need to be on 24/7 if you run it on a Hostinger VPS
 
 ---
 

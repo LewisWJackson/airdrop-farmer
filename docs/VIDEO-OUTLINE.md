@@ -118,7 +118,7 @@ I'll pull up the costs breakdown from the GitHub page. The short version: you ne
 
 *[ON SCREEN: Screenshot of prerequisites from GitHub — screen share.]*
 
-Prerequisites are also on the GitHub page. The main one to sort before you start is a crypto exchange account — Coinbase, Binance, Kraken, Caleb and Brown, anything that lets you buy ETH and send it to an external address. Everything else — Node, Git, Railway CLI — the setup handles automatically if it's missing.
+Prerequisites are also on the GitHub page. The main one to sort before you start is a crypto exchange account — Coinbase, Binance, Kraken, Caleb and Brown, anything that lets you buy ETH and send it to an external address. Everything else — Node, Git, PM2 — the setup handles automatically if it's missing.
 
 **PAYOFF — Platforms:**
 
@@ -228,7 +228,7 @@ Watch what happens here. It reads the entire set of instructions first, then sta
 
 ### STEP 3: Prerequisite checks
 
-*[ON SCREEN: Claude Code runs `node --version`, `git --version`, `railway --version`. Results appearing.]*
+*[ON SCREEN: Claude Code runs `node --version`, `git --version`, `pm2 --version`. Results appearing.]*
 
 **SETUP:**
 
@@ -240,7 +240,7 @@ If you skipped Section 3 and your Node is below version 20, this is where it cat
 
 **PAYOFF:**
 
-*[ON SCREEN: Claude Code prints the prerequisites confirmed message — Node, Git, Railway versions listed.]*
+*[ON SCREEN: Claude Code prints the prerequisites confirmed message — Node, Git, PM2 versions listed.]*
 
 When you see that confirmation printed, your environment is verified. Everything from here runs cleanly.
 
@@ -272,7 +272,7 @@ The pattern I see most in farming setups is private keys stored in plain text. A
 
 What Claude Code is generating now is a 32-byte cryptographically random key — 64 hex characters. Your wallet private keys will be encrypted with this key using AES-256-GCM before they're written to disk. The result is that `wallets.enc.json` file I showed you in the architecture section — a file that is computationally useless without the key that's about to go into your `.env`.
 
-Keep this key in your `.env` locally, or in Railway's environment variables for cloud deployment. Never put it in the code. Never commit it to git. The `.gitignore` already excludes `.env` — we'll verify that in the security section.
+Keep this key in your `.env` — locally, or in the `.env` on your VPS for cloud deployment. Never put it in the code. Never commit it to git. The `.gitignore` already excludes `.env` — we'll verify that in the security section.
 
 ---
 
@@ -386,7 +386,7 @@ The amounts are sized specifically for six months of farming activity with gas c
 
 ### STEP 10: Deploy
 
-*[ON SCREEN: Claude Code asks: Railway or PM2?]*
+*[ON SCREEN: Claude Code asks: Hostinger VPS or PM2 local?]*
 
 **SETUP:**
 
@@ -398,21 +398,23 @@ The people who set this up and then find it has stopped running a week later alm
 
 **PAYOFF:**
 
-I'm going to show you Railway — the cloud option — live now. I'll cover PM2 and VPS in detail in the next section.
+I'm going to show you a Hostinger VPS — the cloud option — live now. I'll cover PM2 local in detail in the next section.
 
-*[ON SCREEN: `railway login` → browser authentication. `railway init` — project name: `jackson-airdrop-farm`.]*
+*[ON SCREEN: Hostinger dashboard — spinning up the cheapest KVM VPS at hostinger.com/lewisjackson10. Then `ssh root@VPS_IP`.]*
 
-`railway login` opens a browser. Log in and come back.
+Grab the cheapest Hostinger KVM plan — link's in the description, hostinger.com/lewisjackson10. It hands you a server IP and a root password. We SSH straight in.
 
-`railway init` links this directory to Railway.
+*[ON SCREEN: `apt install nodejs npm git`, `git clone`, `npm install`, `npm install -g pm2` on the VPS.]*
 
-*[ON SCREEN: Setting environment variables in Railway.]*
+On the VPS: install Node and git, clone the repo, npm install, and install PM2 — the process manager that keeps the farm alive.
 
-Now the environment variables. Your encryption key, Telegram bot token, and Telegram chat ID — the same values from your `.env`. One additional step here: the encrypted wallet file needs to travel to Railway. The setup file handles this by base64-encoding `wallets.enc.json` and storing it as an environment variable. So your wallets never touch Railway's filesystem as a file — they're encoded and stored alongside your other secrets. To decode them, you'd need both the WALLET_DATA variable and the encryption key. Two separate secrets, neither of which appears in your code.
+*[ON SCREEN: Recreating `.env` on the VPS, then `scp wallets.enc.json` up to it.]*
 
-*[ON SCREEN: `railway up -d` deploying. Railway dashboard — deployment live, green status.]*
+Now the secrets. Your encryption key, Telegram bot token, and Telegram chat ID go into a `.env` on the VPS — the same values from your local `.env`. Then we copy the encrypted wallet file up with `scp`. `wallets.enc.json` is AES-256 encrypted — without the encryption key it's useless, and the key lives only in the `.env` on your own server. Two separate secrets, neither of which ever touches the code or git.
 
-`railway up`. When that turns green, your farm is running in the cloud.
+*[ON SCREEN: `pm2 start ecosystem.config.cjs && pm2 save && pm2 startup`. `pm2 logs` showing the farm booting.]*
+
+`pm2 start ecosystem.config.cjs`, then `pm2 save` and `pm2 startup` so it survives reboots. When the logs show it running, your farm is live in the cloud — on a server you fully control.
 
 *[ON SCREEN: Telegram notification arriving — "Farming Run Complete."]*
 
@@ -440,17 +442,17 @@ Quick pause — before the security section. If you want the setup file without 
 
 ## SECTION 7 — DEPLOYMENT OPTIONS IN DETAIL [36:00–42:00]
 
-*[ON SCREEN: Split — Railway dashboard left, terminal right.]*
+*[ON SCREEN: Split — Hostinger VPS terminal left, pm2 logs right.]*
 
 **SETUP:**
 
-You've seen Railway at a high level. Let me cover all three deployment options properly so you can make the right choice for your situation and know how to manage it going forward.
+You've seen the Hostinger VPS at a high level. Let me cover both deployment options properly so you can make the right choice for your situation and know how to manage it going forward.
 
 ---
 
-**Railway — recommended for most people**
+**Hostinger VPS — recommended for most people**
 
-*[ON SCREEN: Railway dashboard — deployment logs tab.]*
+*[ON SCREEN: `pm2 logs jackson-airdrop-farm` — farming runs streaming.]*
 
 **TENSION:**
 
@@ -458,9 +460,9 @@ The failure mode I see most with local setups is people who ran PM2 in good fait
 
 **PAYOFF:**
 
-Railway runs your farm in the cloud. Your laptop can be off, closed, in another country. The cron schedule runs at 8am, 2pm, 8pm UTC regardless. Your deployment logs are in the Railway dashboard — every farming run recorded. Free tier covers this easily.
+A Hostinger VPS runs your farm in the cloud. Your laptop can be off, closed, in another country. The schedule runs at 8am, 2pm, 8pm UTC regardless, because PM2 keeps the process alive on the server. Every farming run is in `pm2 logs`. The cheapest KVM plan — hostinger.com/lewisjackson10 — covers this easily at around $5 a month.
 
-The one thing to know: if you need to update the farm code, `railway up` from the project directory redeploys in about ninety seconds.
+The one thing to know: if you need to update the farm code, `git pull && pm2 restart jackson-airdrop-farm` on the VPS redeploys in seconds.
 
 ---
 
@@ -502,7 +504,7 @@ Four to six dollars a month on Hetzner or DigitalOcean gets you a machine that n
 
 Inside WSL, PM2 works identically to Linux. Run `pm2 startup` inside the WSL terminal and follow what it prints.
 
-Honestly: Railway is the simpler choice on Windows. No WSL complexity, no startup configuration. Deploy once and you're done.
+Honestly: a Hostinger VPS is the simpler choice on Windows. No WSL complexity, no startup configuration — you SSH in once, PM2 handles the rest, and you're done.
 
 ---
 
@@ -532,7 +534,7 @@ Your twelve-word recovery phrase is the master key to all ten wallets and every 
 
 *[ON SCREEN: Scroll through `data/wallets.enc.json` — show encrypted content.]*
 
-This is what your private keys look like on disk. AES-256 encrypted. Without the key in your `.env`, this file is computationally useless. Your encryption key lives in `.env` locally or in Railway's environment variable settings. It never appears in the code.
+This is what your private keys look like on disk. AES-256 encrypted. Without the key in your `.env`, this file is computationally useless. Your encryption key lives in `.env` — locally, or in the `.env` on your VPS. It never appears in the code.
 
 *[ON SCREEN: Show `.gitignore` — `.env` entry.]*
 
@@ -678,7 +680,7 @@ We just walked through every piece of this system manually so you understand wha
 - ETH price chart (TradingView)
 - Arbitrum/zkSync airdrop announcement screenshots — source from original Twitter/X posts
 - Chain explorer pages showing transaction activity for a sample wallet
-- Railway dashboard after deployment
+- Hostinger VPS terminal / `pm2 logs` after deployment
 
 ### Key filming notes:
 - **The mnemonic hard stop (Step 7 in Section 6):** Full pause. Look directly into lens. Slow down. The 3–4 second actual wait is real — give viewers time to physically get a pen. Don't rush out of it.
@@ -696,7 +698,7 @@ We just walked through every piece of this system manually so you understand wha
 ```
 Lead magnet (free setup file): [Google Drive link]
 GitHub: https://github.com/jackson-video-resources/Jackson-airdrop-farmer
-Railway (cloud hosting): https://railway.com?referralCode=BLrK89
+Hostinger VPS (cloud hosting): https://hostinger.com/lewisjackson10
 Caleb & Brown (buy ETH): [referral link]
 
 Timestamps:
@@ -706,7 +708,7 @@ Timestamps:
 14:00 - Architecture overview
 18:00 - Setting up Claude Code
 22:00 - One-shot setup demo
-36:00 - Railway / PM2 / VPS deployment
+36:00 - Hostinger VPS / PM2 deployment
 42:00 - Security best practices
 47:00 - Monitoring & maintenance
 51:00 - Close

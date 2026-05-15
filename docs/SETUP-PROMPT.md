@@ -48,19 +48,19 @@ Once `node --version` and `git --version` both return successfully, continue to 
 
 ---
 
-**Also check: Railway CLI**
+**Also check: PM2** (process manager that keeps the farm running 24/7)
 
 ```bash
-railway --version
+pm2 --version
 ```
 
 If it's not installed:
 
 ```bash
-npm install -g @railway/cli
+npm install -g pm2
 ```
 
-Railway CLI is needed for cloud deployment in Step 11. If you're planning to use PM2 locally instead, you can skip this for now.
+PM2 is what keeps the farm alive on a Hostinger VPS (Step 11) and locally.
 
 ---
 
@@ -82,7 +82,7 @@ You should now be inside the `jackson-airdrop-farm` folder. Confirm with:
 ls
 ```
 
-You should see files including `package.json`, `src/`, `ecosystem.config.cjs`, and `railway.json`.
+You should see files including `package.json`, `src/`, and `ecosystem.config.cjs`.
 
 ---
 
@@ -356,9 +356,9 @@ If the Telegram message arrives — everything is working.
 
 How do you want to run the farmer?
 
-**Option A: Railway (cloud, always-on — recommended)**
+**Option A: Hostinger VPS (cloud, always-on — recommended)**
 - Runs even when your computer is off
-- Free Railway tier covers it (~$2–3/month of compute)
+- Cheapest Hostinger KVM plan (~$5/month) covers it — https://hostinger.com/lewisjackson10
 - Best option for serious long-term farming
 
 **Option B: PM2 local (Mac, Linux, WSL)**
@@ -368,44 +368,38 @@ How do you want to run the farmer?
 
 ---
 
-### Option A: Railway Deployment
+### Option A: Hostinger VPS Deployment
 
-**1. Log in to Railway:**
-```bash
-railway login
-```
-A browser window opens — sign in or create a free account.
+**1. Get a VPS:**
+Grab the cheapest KVM plan at https://hostinger.com/lewisjackson10. Hostinger gives you a server IP and root password.
 
-**2. Initialise your project:**
+**2. Connect and install:**
 ```bash
-railway init
-```
-When prompted, choose "Create a new project" and give it a name like `jackson-airdrop-farm`.
-
-**3. Set environment variables in Railway:**
-```bash
-railway variables set ENCRYPTION_KEY=$(grep ENCRYPTION_KEY .env | cut -d= -f2)
-railway variables set TELEGRAM_BOT_TOKEN=$(grep TELEGRAM_BOT_TOKEN .env | cut -d= -f2)
-railway variables set TELEGRAM_CHAT_ID=$(grep TELEGRAM_CHAT_ID .env | cut -d= -f2)
+ssh root@YOUR_VPS_IP
+apt update && apt install -y nodejs npm git
+git clone https://github.com/jackson-video-resources/Jackson-airdrop-farmer.git jackson-airdrop-farm
+cd jackson-airdrop-farm && npm install && npm install -g pm2
 ```
 
-**4. Copy your encrypted wallet file to be included in the deploy:**
+**3. Recreate your `.env` on the VPS** with the same `ENCRYPTION_KEY`, `TELEGRAM_BOT_TOKEN`, and `TELEGRAM_CHAT_ID`.
 
-Your `data/wallets.enc.json` file contains your encrypted wallets and needs to be deployed with the code. It is safe to include — the keys are encrypted with your ENCRYPTION_KEY. Confirm it exists:
+**4. Copy your encrypted wallet file up to the VPS:**
+
+Your `data/wallets.enc.json` holds your encrypted wallets (safe — keys are encrypted with your ENCRYPTION_KEY). From your local machine:
 ```bash
-ls -la data/wallets.enc.json
+scp data/wallets.enc.json root@YOUR_VPS_IP:~/jackson-airdrop-farm/data/
 ```
 
-**5. Deploy:**
+**5. Start it 24/7:**
 ```bash
-railway up
+pm2 start ecosystem.config.cjs && pm2 save && pm2 startup
 ```
 
-Railway will build and deploy. When it says "Deploy succeeded", your farmer is live in the cloud.
+Run the command `pm2 startup` prints. Your farmer is now live and survives reboots.
 
 **6. Confirm it's running:**
 ```bash
-railway logs
+pm2 logs jackson-airdrop-farm
 ```
 
 You should see log output from the farmer's startup sequence.
@@ -470,7 +464,7 @@ Transactions logged: 5
 | Run farm immediately | `npx tsx src/scheduled-farm.ts --no-jitter` |
 | Check PM2 status | `pm2 list` |
 | View PM2 logs | `pm2 logs jackson-airdrop-farm --lines 50` |
-| Check Railway logs | `railway logs` |
+| Restart on the VPS | `pm2 restart jackson-airdrop-farm` |
 
 ---
 

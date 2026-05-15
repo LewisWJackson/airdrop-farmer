@@ -10,7 +10,7 @@ This guide uses Claude Code as an interactive setup assistant. Claude will run e
 ---
 
 ```
-I want to set up the Jackson Airdrop Farm — an open-source, multi-wallet on-chain activity system for MegaETH, Abstract, and Unichain. The source code is at https://github.com/jackson-video-resources/Jackson-airdrop-farmer and I want to run it on my own machine or Railway account.
+I want to set up the Jackson Airdrop Farm — an open-source, multi-wallet on-chain activity system for MegaETH, Abstract, and Unichain. The source code is at https://github.com/jackson-video-resources/Jackson-airdrop-farmer and I want to run it on my own machine or a Hostinger VPS.
 
 Please follow these steps in order. Check for errors at each step and fix them before continuing. Give me a clear status update after each step completes.
 
@@ -34,9 +34,9 @@ Run: `git --version`
 - Missing on Mac: `brew install git`
 - Missing on Linux/WSL: `sudo apt-get install -y git`
 
-**Railway CLI**
-Run: `railway --version`
-- Missing: `npm install -g @railway/cli`
+**PM2** (process manager that keeps the farm running 24/7)
+Run: `pm2 --version`
+- Missing: `npm install -g pm2`
 
 Print a summary of all three versions once confirmed.
 
@@ -213,43 +213,37 @@ fetch(\`https://api.telegram.org/bot\${token}/sendMessage\`, {
 
 ---
 
-## STEP 9 — Deploy to Railway
+## STEP 9 — Deploy to a Hostinger VPS (24/7)
 
-Railway is a PaaS host (like Heroku) where you create your own private project. The environment variables below go into your project's encrypted variable vault — they are not shared with anyone.
+A Hostinger VPS is a small always-on server you control. It keeps the farm running 24/7 even when your computer is off. The cheapest KVM plan (~$5/mo) is plenty.
 
-**Create a Railway account (if you don't have one):**
-Tell me to visit https://railway.app and sign up. Wait for my confirmation.
+**Get a VPS (if you don't have one):**
+Tell me to grab the cheapest KVM plan at https://hostinger.com/lewisjackson10 and sign up. Hostinger then gives you a server IP and root password. Wait for my confirmation, then ask me for the IP and password.
 
-**Log in:**
+**Connect and install:**
 ```bash
-railway login
-```
-This opens a browser window. Log in with GitHub or email.
-
-**Create a Railway project:**
-```bash
-railway init
-```
-Use project name: `jackson-airdrop-farm`
-
-**Set environment variables in your Railway project:**
-```bash
-railway variables set ENCRYPTION_KEY="$(grep ENCRYPTION_KEY .env | cut -d= -f2)"
-railway variables set TELEGRAM_BOT_TOKEN="$(grep TELEGRAM_BOT_TOKEN .env | cut -d= -f2)"
-railway variables set TELEGRAM_CHAT_ID="$(grep TELEGRAM_CHAT_ID .env | cut -d= -f2)"
-railway variables set NODE_ENV=production
-WALLET_DATA=$(base64 < data/wallets.enc.json | tr -d '\n')
-railway variables set WALLET_DATA_B64="$WALLET_DATA"
+ssh root@MY_VPS_IP
+apt update && apt install -y nodejs npm git
+git clone https://github.com/jackson-video-resources/Jackson-airdrop-farmer.git jackson-airdrop-farm
+cd jackson-airdrop-farm && npm install
 ```
 
-Note: WALLET_DATA is your AES-256-GCM encrypted wallet file (not raw private keys). The encryption key and wallet data go to your own Railway project — the same way you'd put DATABASE_URL in a .env on your own server.
-
-**Deploy:**
+**Move your secrets onto the VPS:**
+Recreate the `.env` on the VPS with the same `ENCRYPTION_KEY`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, and `NODE_ENV=production`. Then copy the encrypted wallet file up from your machine:
 ```bash
-railway up -d
+scp data/wallets.enc.json root@MY_VPS_IP:~/jackson-airdrop-farm/data/
 ```
 
-If deployment fails, run `railway logs` and report what you see.
+Note: `wallets.enc.json` is your AES-256-GCM encrypted wallet file (not raw private keys). It and the encryption key live only in your `.env` on your own VPS — never in the code or git.
+
+**Start it under PM2 so it runs 24/7:**
+```bash
+npm install -g pm2
+pm2 start ecosystem.config.cjs
+pm2 save && pm2 startup
+```
+
+Run the command `pm2 startup` prints, then verify with `pm2 logs jackson-airdrop-farm --lines 20`.
 
 ---
 
@@ -296,7 +290,6 @@ Your 10 wallets are farming MegaETH, Abstract, and Unichain 3x per day.
 Check in:
   Telegram: farming summaries every 8 hours
   Balances: npx tsx src/check-all-balances.ts
-  Logs (Railway): railway logs
   Logs (PM2): pm2 logs jackson-airdrop-farm
 
 Security checklist:
