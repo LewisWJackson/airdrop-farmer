@@ -42,7 +42,7 @@ Airdrops reward wallets with genuine transaction history. This farm builds that 
 Install [WSL2](https://docs.microsoft.com/en-us/windows/wsl/install) first, then follow Mac/Linux instructions inside WSL.
 
 ### VPS Users
-Any Ubuntu 22.04+ VPS works. DigitalOcean $6/month droplet is sufficient.
+Any Ubuntu 22.04+ VPS works. The cheapest [Hostinger KVM VPS](https://hostinger.com/lewisjackson10) (~$5/month) is plenty.
 
 ---
 
